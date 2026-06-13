@@ -4,135 +4,102 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Honey App — Ayudá a esta mascota</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/honey-theme.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
-        body { font-family: 'Nunito', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .medical-row { background: rgba(15, 23, 42, 0.55); border: 1px solid #334155; }
-        .privacy-shield { background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(15,23,42,0.4) 100%); border: 1px solid rgba(16,185,129,0.25); }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .fade-up { animation: fadeUp 0.4s ease-out backwards; }
-        .fade-up-delay-1 { animation-delay: 0.06s; }
-        .fade-up-delay-2 { animation-delay: 0.12s; }
-        #ficha-body { transition: opacity 0.35s ease, transform 0.35s ease, max-height 0.45s ease; max-height: 4000px; overflow: hidden; }
-        #ficha-body.is-collapsed { opacity: 0; transform: translateY(-8px); max-height: 0; pointer-events: none; margin: 0 !important; padding: 0 !important; }
-        #btn-start-chat { display: flex; }
-        #btn-start-chat.is-chat-open { display: none !important; }
-        #panel-chat { transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
-        #panel-chat.is-open { transform: translateY(0); }
-        #panel-chat.panel-chat--hidden { visibility: hidden; pointer-events: none; }
-        #chat-messages { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
-        .bubble-finder { background: #243044; color: #e2e8f0; border: 1px solid #475569; border-bottom-left-radius: 0.35rem; }
-        .bubble-owner { background: #d97706; color: #fff; border-bottom-right-radius: 0.35rem; }
-        .chat-shell { height: 100dvh; height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
-<body class="honey-app bg-[#0f172a] text-slate-300 min-h-screen flex flex-col">
+<body>
 
-    <div id="app-shell" class="flex flex-col flex-1 pb-6">
-        <header id="main-header" class="text-center pt-6 px-4 pb-2 shrink-0 flex flex-col items-center gap-2">
-            <img src="/brand/honey-app-logo.png" alt="Honey App" class="honey-logo honey-logo--hero mx-auto" width="200" height="45" decoding="async">
-            <p class="text-sm text-slate-500">Vecino colaborador · Ayudá a que vuelva a casa</p>
+    <div id="app-shell" class="app-shell">
+        <header id="main-header" class="header">
+            <img src="/assets/honey-app-logo.png" alt="Honey App" class="logo" width="200" height="45" decoding="async">
+            <p class="tagline">Vecino colaborador · Ayudá a que vuelva a casa</p>
         </header>
 
-        <div id="statusBanner" class="hidden mx-4 max-w-md w-full self-center rounded-xl px-4 py-3 text-sm font-medium text-center border shrink-0"></div>
+        <div id="statusBanner" class="status-banner hidden"></div>
 
-        <main id="panel-loading" class="flex-1 flex flex-col items-center justify-center px-4 py-16">
-            <div class="w-12 h-12 rounded-full border-2 border-[#d97706]/30 border-t-[#d97706] animate-spin mb-4" aria-hidden="true"></div>
-            <p class="text-sm text-slate-400">Verificando chapita QR…</p>
+        <main id="panel-loading" class="panel panel--center">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Verificando chapita QR…</p>
         </main>
 
-        <main id="panel-no-token" class="hidden flex-1 px-4 py-8 max-w-md mx-auto w-full">
-            <div class="card-honey p-6 text-center">
-                <p class="text-3xl mb-3" aria-hidden="true">📱</p>
-                <h2 class="text-lg font-bold text-[#f8fafc] mb-2">Escaneá la chapita</h2>
-                <p class="text-sm text-slate-400 leading-relaxed">Este enlace necesita un código QR válido. Volvé a escanear la chapita de la mascota.</p>
+        <main id="panel-no-token" class="panel panel--center hidden">
+            <div class="card card--hero">
+                <h2 class="card__title">Escaneá la chapita</h2>
+                <p class="card__text">Este enlace necesita un código QR válido. Volvé a escanear la chapita de la mascota.</p>
+                <button type="button" id="btn-scan-tag" class="btn-primary btn-scan">📱 Escanear chapita</button>
             </div>
         </main>
 
-        <main id="panel-pet" class="hidden flex-1 px-4 max-w-md mx-auto w-full flex flex-col gap-4 relative">
+        <main id="panel-pet" class="panel panel--pet hidden">
 
-            <div id="ficha-body" class="flex flex-col gap-4">
-                <section class="card-honey overflow-hidden fade-up">
-                    <div id="pet-photo-wrap" class="hidden relative bg-slate-900">
-                        <img id="pet-photo" src="" alt="" class="w-full h-48 object-cover">
-                        <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#1e293b] to-transparent"></div>
+            <div id="ficha-body" class="ficha-body">
+                <section class="card card--overflow fade-up">
+                    <div id="pet-photo-wrap" class="pet-photo-wrap hidden">
+                        <img id="pet-photo" src="" alt="" class="pet-photo">
                     </div>
-                    <div class="p-5">
-                        <span class="inline-block text-[10px] font-bold uppercase tracking-wider text-[#d97706] bg-[#d97706]/10 border border-[#d97706]/30 px-2 py-0.5 rounded-full mb-2">Mascota identificada</span>
-                        <h2 id="pet-name" class="text-2xl font-extrabold text-[#f8fafc]"></h2>
-                        <p id="pet-meta" class="text-sm text-slate-400 mt-1"></p>
-                        <blockquote id="pet-finder-message" class="mt-4 text-sm text-slate-200 leading-relaxed border-l-2 border-[#d97706] pl-3 italic"></blockquote>
+                    <div class="card__body">
+                        <span class="pet-badge">Mascota identificada</span>
+                        <h2 id="pet-name" class="pet-name"></h2>
+                        <p id="pet-meta" class="pet-meta"></p>
+                        <blockquote id="pet-finder-message" class="pet-message"></blockquote>
                     </div>
                 </section>
 
-                <div class="privacy-shield rounded-2xl px-4 py-3 flex items-start gap-3 fade-up fade-up-delay-1">
-                    <span class="text-xl shrink-0" aria-hidden="true">🔒</span>
+                <div class="privacy-shield fade-up fade-up-delay-1">
+                    <span class="privacy-shield__icon" aria-hidden="true">🔒</span>
                     <div>
-                        <p class="text-xs font-bold text-emerald-400">Comunicación 100% anónima</p>
-                        <p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Nunca pedimos teléfono ni WhatsApp. Todo el contacto con el dueño es interno y protegido por Honey.</p>
+                        <p class="privacy-shield__title">Comunicación 100% anónima</p>
+                        <p class="privacy-shield__text">Nunca pedimos teléfono ni WhatsApp. Todo el contacto con el dueño es interno y protegido por Honey.</p>
                     </div>
                 </div>
 
-                <section id="section-medical" class="card-honey p-5 fade-up fade-up-delay-1">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="text-lg" aria-hidden="true">🩺</span>
-                        <h3 class="text-sm font-extrabold text-[#f8fafc] uppercase tracking-wide">Ficha Médica Avanzada</h3>
-                    </div>
-                    <div id="medical-grid" class="space-y-3"></div>
-                    <p id="medical-empty" class="hidden text-sm text-slate-500 text-center py-4">El dueño no cargó datos médicos adicionales.</p>
+                <section id="section-medical" class="card card__body fade-up fade-up-delay-1">
+                    <h3 class="section-title"><span aria-hidden="true">🩺</span> Ficha Médica Avanzada</h3>
+                    <div id="medical-grid" class="medical-grid"></div>
+                    <p id="medical-empty" class="medical-empty hidden">El dueño no cargó datos médicos adicionales.</p>
                 </section>
             </div>
 
-            <button type="button" id="btn-start-chat"
-                class="fade-up fade-up-delay-2 w-full min-h-[56px] bg-[#d97706] hover:bg-[#b45309] active:scale-[0.98] text-[#f8fafc] font-extrabold py-4 px-6 rounded-2xl transition shadow-lg shadow-amber-900/30 text-base flex items-center justify-center gap-2 shrink-0">
+            <button type="button" id="btn-start-chat" class="btn-primary fade-up fade-up-delay-2">
                 💬 Iniciar Chat Seguro con el Dueño
             </button>
         </main>
 
-        <footer id="main-footer" class="text-center text-[10px] text-slate-600 mt-6 px-4 shrink-0">
+        <footer id="main-footer" class="footer">
             Honey App · Comunidad que cuida mascotas 💙🐾
         </footer>
     </div>
 
-    <!-- Chat a pantalla completa -->
-    <section id="panel-chat" class="hidden fixed inset-0 z-50 flex flex-col chat-shell bg-[#0f172a] max-w-md mx-auto left-0 right-0" role="dialog" aria-modal="true" aria-label="Chat seguro con el dueño">
-        <header class="shrink-0 bg-[#1e293b] border-b border-slate-700 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-lg">
-            <div class="flex items-center gap-2 mb-1">
-                <button type="button" id="btn-chat-back" class="text-slate-400 hover:text-[#d97706] text-sm font-semibold shrink-0" aria-label="Volver a la ficha">← Ficha</button>
-                <p class="flex-1 text-center text-sm font-extrabold text-[#f8fafc] leading-tight">🔒 Chat Seguro y Encriptado</p>
-                <span class="w-12 shrink-0"></span>
+    <section id="panel-chat" class="panel-chat hidden" role="dialog" aria-modal="true" aria-label="Chat seguro con el dueño">
+        <header class="chat-header">
+            <div class="chat-header__row">
+                <button type="button" id="btn-chat-back" class="btn-back" aria-label="Volver a la ficha">← Ficha</button>
+                <p class="chat-header__title">🔒 Chat Seguro y Encriptado</p>
+                <span class="chat-header__spacer"></span>
             </div>
-            <p class="text-center text-[10px] text-[#d97706] font-bold">Honey App</p>
-            <p class="text-center text-[10px] text-slate-500 mt-1">Tu identidad y número están protegidos · sin teléfono ni WhatsApp</p>
-            <p id="chat-pet-label" class="text-center text-xs text-slate-400 mt-2 truncate"></p>
+            <p class="chat-header__brand">Honey App</p>
+            <p class="chat-header__hint">Tu identidad y número están protegidos · sin teléfono ni WhatsApp</p>
+            <p id="chat-pet-label" class="chat-pet-label"></p>
         </header>
 
-        <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0" role="log" aria-live="polite"></div>
+        <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div>
 
-        <div id="chat-empty-hint" class="hidden px-4 pb-2 text-center text-xs text-slate-500">
+        <div id="chat-empty-hint" class="chat-empty-hint hidden">
             Escribí un mensaje para avisarle al dueño de forma anónima.
         </div>
 
-        <div class="shrink-0 border-t border-slate-700 bg-[#1e293b]/95 px-3 py-2 flex gap-2">
-            <button type="button" id="btn-gps" title="Compartir ubicación"
-                class="shrink-0 w-11 h-11 rounded-xl bg-[#243044] border border-slate-600 text-lg hover:border-[#d97706]/50 transition" aria-label="Compartir GPS">📍</button>
-            <label class="shrink-0 w-11 h-11 rounded-xl bg-[#243044] border border-slate-600 flex items-center justify-center text-lg hover:border-[#d97706]/50 transition cursor-pointer" aria-label="Adjuntar foto">
+        <div class="chat-toolbar">
+            <button type="button" id="btn-gps" title="Compartir ubicación" class="btn-icon" aria-label="Compartir GPS">📍</button>
+            <label class="btn-icon" aria-label="Adjuntar foto">
                 📷
                 <input id="input-photo" type="file" accept="image/*" capture="environment" class="hidden">
             </label>
-            <img id="photo-preview-thumb" class="hidden w-11 h-11 rounded-xl object-cover border border-[#d97706]/50 shrink-0" alt="">
+            <img id="photo-preview-thumb" class="photo-preview hidden" alt="">
         </div>
 
-        <form id="chat-form" class="shrink-0 flex gap-2 p-3 pt-2 bg-[#0f172a] border-t border-slate-800 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <form id="chat-form" class="chat-form">
             <input id="chat-input" type="text" maxlength="500" autocomplete="off" enterkeyhint="send"
-                placeholder="Escribí tu mensaje…"
-                class="flex-1 min-h-[48px] bg-[#1e293b] border border-slate-600 rounded-2xl px-4 py-3 text-sm text-[#f8fafc] placeholder-slate-500 focus:outline-none focus:border-[#d97706]">
-            <button type="submit" id="btn-send-chat"
-                class="shrink-0 min-h-[48px] min-w-[48px] px-4 rounded-2xl bg-[#d97706] hover:bg-[#b45309] text-white font-bold text-sm transition disabled:opacity-50">
-                Enviar
-            </button>
+                placeholder="Escribí tu mensaje…" class="chat-input">
+            <button type="submit" id="btn-send-chat" class="btn-send">Enviar</button>
         </form>
     </section>
 
@@ -204,13 +171,7 @@
 
         function showStatus(message, type = "info") {
             const banner = $("statusBanner");
-            banner.className = "mx-4 max-w-md w-full self-center rounded-xl px-4 py-3 text-sm font-medium text-center border shrink-0";
-            const styles = {
-                success: ["bg-emerald-950/60", "text-emerald-300", "border-emerald-700"],
-                error: ["bg-red-950/60", "text-red-300", "border-red-800"],
-                info: ["bg-[#d97706]/15", "text-[#fbbf24]", "border-[#d97706]/40"],
-            };
-            banner.classList.add(...(styles[type] || styles.info));
+            banner.className = `status-banner status-banner--${type}`;
             banner.textContent = message;
             banner.classList.remove("hidden");
         }
@@ -253,9 +214,9 @@
         function renderMedicalField(label, icon, value) {
             const text = (value ?? "").trim();
             if (!text) return "";
-            return `<div class="medical-row rounded-xl p-3">
-                <p class="text-[10px] font-bold text-[#d97706] uppercase tracking-wide mb-1">${icon} ${escapeHtml(label)}</p>
-                <p class="text-sm text-slate-200 leading-relaxed">${escapeHtml(text)}</p>
+            return `<div class="medical-row">
+                <p class="medical-row__label">${icon} ${escapeHtml(label)}</p>
+                <p class="medical-row__value">${escapeHtml(text)}</p>
             </div>`;
         }
 
@@ -313,20 +274,20 @@
             hint.classList.add("hidden");
             box.innerHTML = messages.map((m) => {
                 const isOwner = m.sender === "owner";
-                const align = isOwner ? "justify-start" : "justify-end";
+                const align = isOwner ? "chat-msg--owner" : "chat-msg--finder";
                 const bubble = isOwner ? "bubble-owner" : "bubble-finder";
                 const label = isOwner ? "Dueño (anónimo)" : "Vos";
                 const text = m.text || m.locationReference || "";
                 const img = m.imageUrl
-                    ? `<img src="${escapeHtml(m.imageUrl)}" alt="Adjunto" class="mt-2 rounded-lg max-h-40 w-full object-cover">`
+                    ? `<img src="${escapeHtml(m.imageUrl)}" alt="Adjunto" class="chat-bubble__img">`
                     : "";
 
-                return `<div class="flex ${align}">
-                    <div class="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm shadow-md ${bubble}">
-                        <p class="text-[10px] opacity-75 mb-0.5 font-semibold">${label}</p>
-                        ${text ? `<p class="leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(text)}</p>` : ""}
+                return `<div class="chat-msg ${align}">
+                    <div class="chat-bubble ${bubble}">
+                        <p class="chat-bubble__label">${label}</p>
+                        ${text ? `<p class="chat-bubble__text">${escapeHtml(text)}</p>` : ""}
                         ${img}
-                        <time class="block text-[9px] opacity-60 mt-1 text-right">${formatMessageTime(m.createdAt)}</time>
+                        <time class="chat-bubble__time">${formatMessageTime(m.createdAt)}</time>
                     </div>
                 </div>`;
             }).join("");
@@ -374,9 +335,8 @@
             const btn = $("btn-start-chat");
             if (!btn) return;
 
-            btn.classList.remove("hidden", "opacity-70", "cursor-default", "is-chat-open");
+            btn.classList.remove("hidden", "is-chat-open");
             btn.disabled = false;
-            btn.style.display = "flex";
 
             if (state.chatActive) {
                 btn.classList.add("is-chat-open");
@@ -600,7 +560,7 @@
                 });
 
                 btn.textContent = "✓";
-                btn.classList.add("border-emerald-500", "text-emerald-400");
+                btn.classList.add("btn-icon--sent");
             } catch (err) {
                 console.error(err);
                 showStatus("Error de red al enviar GPS", "error");
@@ -611,6 +571,10 @@
 
         $("btn-start-chat").addEventListener("click", activateChat);
         $("btn-chat-back").addEventListener("click", closeChatUI);
+
+        $("btn-scan-tag")?.addEventListener("click", () => {
+            showStatus("Usá la cámara de tu celular sobre la chapita QR de la mascota.", "info");
+        });
 
         $("btn-gps").addEventListener("click", () => {
             if (!state.chatActive) return;

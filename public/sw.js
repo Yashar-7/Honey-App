@@ -11,8 +11,8 @@ self.addEventListener("push", (event) => {
     body: data.body ?? "",
     tag: data.tag ?? "honey-app",
     data: { url: data.url ?? "/dashboard.html", ...(data.data ?? {}) },
-    icon: "/brand/honey-app-logo.png",
-    badge: "/brand/honey-app-logo.png",
+    icon: "/assets/honey-app-logo.png",
+    badge: "/assets/honey-app-logo.png",
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
