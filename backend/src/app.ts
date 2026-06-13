@@ -23,6 +23,26 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "honey-app-backend" });
 });
 
+/**
+ * Vercel rewrites a `/api/index.ts` pueden entregar la URL sin el prefijo `/api`.
+ * Este middleware restaura la ruta completa para que coincida con app.use("/api/...", ...).
+ */
+app.use((req, _res, next) => {
+  const path = req.path;
+  const needsApiPrefix =
+    path.startsWith("/qr") ||
+    path.startsWith("/alerts") ||
+    path.startsWith("/chat") ||
+    path.startsWith("/auth") ||
+    path.startsWith("/pets") ||
+    path.startsWith("/owner");
+
+  if (needsApiPrefix && !path.startsWith("/api/")) {
+    req.url = `/api${req.url.startsWith("/") ? req.url : `/${req.url}`}`;
+  }
+  next();
+});
+
 app.use("/api/qr", qrRouter);
 app.use("/api/alerts", alertsRouter);
 app.use("/api/chat", chatRouter);
