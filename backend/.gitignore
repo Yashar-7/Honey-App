@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+*.log
+public/uploads/*
+!public/uploads/.gitkeep
+# Archivos de configuración locales
+mis_keys.txt
+.env.local
+
+# Carpetas de caché y logs
+.vercel/
+.eslintcache

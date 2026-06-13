@@ -1,0 +1,44 @@
+# --- Secretos y entorno ---
+.env
+.env.local
+.env.*.local
+mis_keys.txt
+
+# .env.example SÍ se commitea, pero solo con placeholders (sin credenciales reales)
+
+# --- Dependencias ---
+node_modules/
+
+# --- Build ---
+dist/
+*.tsbuildinfo
+
+# --- Sistema operativo ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# --- Logs y temporales ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.cache/
+.tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+
+# --- Uploads en runtime (chat local) ---
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+
+# --- IDE / editor ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Vercel / deploy local ---
+.vercel/

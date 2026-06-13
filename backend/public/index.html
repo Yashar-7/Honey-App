@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Honey App — Ayudá a esta mascota</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/honey-theme.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+        body { font-family: 'Nunito', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .medical-row { background: rgba(15, 23, 42, 0.55); border: 1px solid #334155; }
+        .privacy-shield { background: linear-gradient(135deg, rgba(16,185,129,0.12) 0%, rgba(15,23,42,0.4) 100%); border: 1px solid rgba(16,185,129,0.25); }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-up { animation: fadeUp 0.4s ease-out backwards; }
+        .fade-up-delay-1 { animation-delay: 0.06s; }
+        .fade-up-delay-2 { animation-delay: 0.12s; }
+        #ficha-body { transition: opacity 0.35s ease, transform 0.35s ease, max-height 0.45s ease; max-height: 4000px; overflow: hidden; }
+        #ficha-body.is-collapsed { opacity: 0; transform: translateY(-8px); max-height: 0; pointer-events: none; margin: 0 !important; padding: 0 !important; }
+        #btn-start-chat { display: flex; }
+        #btn-start-chat.is-chat-open { display: none !important; }
+        #panel-chat { transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1); }
+        #panel-chat.is-open { transform: translateY(0); }
+        #panel-chat.panel-chat--hidden { visibility: hidden; pointer-events: none; }
+        #chat-messages { scroll-behavior: smooth; -webkit-overflow-scrolling: touch; }
+        .bubble-finder { background: #243044; color: #e2e8f0; border: 1px solid #475569; border-bottom-left-radius: 0.35rem; }
+        .bubble-owner { background: #d97706; color: #fff; border-bottom-right-radius: 0.35rem; }
+        .chat-shell { height: 100dvh; height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+    </style>
+</head>
+<body class="honey-app bg-[#0f172a] text-slate-300 min-h-screen flex flex-col">
+
+    <div id="app-shell" class="flex flex-col flex-1 pb-6">
+        <header id="main-header" class="text-center pt-6 px-4 pb-2 shrink-0 flex flex-col items-center gap-2">
+            <img src="/brand/honey-app-logo.png" alt="Honey App" class="honey-logo honey-logo--hero mx-auto" width="200" height="45" decoding="async">
+            <p class="text-sm text-slate-500">Vecino colaborador · Ayudá a que vuelva a casa</p>
+        </header>
+
+        <div id="statusBanner" class="hidden mx-4 max-w-md w-full self-center rounded-xl px-4 py-3 text-sm font-medium text-center border shrink-0"></div>
+
+        <main id="panel-loading" class="flex-1 flex flex-col items-center justify-center px-4 py-16">
+            <div class="w-12 h-12 rounded-full border-2 border-[#d97706]/30 border-t-[#d97706] animate-spin mb-4" aria-hidden="true"></div>
+            <p class="text-sm text-slate-400">Verificando chapita QR…</p>
+        </main>
+
+        <main id="panel-no-token" class="hidden flex-1 px-4 py-8 max-w-md mx-auto w-full">
+            <div class="card-honey p-6 text-center">
+                <p class="text-3xl mb-3" aria-hidden="true">📱</p>
+                <h2 class="text-lg font-bold text-[#f8fafc] mb-2">Escaneá la chapita</h2>
+                <p class="text-sm text-slate-400 leading-relaxed">Este enlace necesita un código QR válido. Volvé a escanear la chapita de la mascota.</p>
+            </div>
+        </main>
+
+        <main id="panel-pet" class="hidden flex-1 px-4 max-w-md mx-auto w-full flex flex-col gap-4 relative">
+
+            <div id="ficha-body" class="flex flex-col gap-4">
+                <section class="card-honey overflow-hidden fade-up">
+                    <div id="pet-photo-wrap" class="hidden relative bg-slate-900">
+                        <img id="pet-photo" src="" alt="" class="w-full h-48 object-cover">
+                        <div class="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#1e293b] to-transparent"></div>
+                    </div>
+                    <div class="p-5">
+                        <span class="inline-block text-[10px] font-bold uppercase tracking-wider text-[#d97706] bg-[#d97706]/10 border border-[#d97706]/30 px-2 py-0.5 rounded-full mb-2">Mascota identificada</span>
+                        <h2 id="pet-name" class="text-2xl font-extrabold text-[#f8fafc]"></h2>
+                        <p id="pet-meta" class="text-sm text-slate-400 mt-1"></p>
+                        <blockquote id="pet-finder-message" class="mt-4 text-sm text-slate-200 leading-relaxed border-l-2 border-[#d97706] pl-3 italic"></blockquote>
+                    </div>
+                </section>
+
+                <div class="privacy-shield rounded-2xl px-4 py-3 flex items-start gap-3 fade-up fade-up-delay-1">
+                    <span class="text-xl shrink-0" aria-hidden="true">🔒</span>
+                    <div>
+                        <p class="text-xs font-bold text-emerald-400">Comunicación 100% anónima</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5 leading-relaxed">Nunca pedimos teléfono ni WhatsApp. Todo el contacto con el dueño es interno y protegido por Honey.</p>
+                    </div>
+                </div>
+
+                <section id="section-medical" class="card-honey p-5 fade-up fade-up-delay-1">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="text-lg" aria-hidden="true">🩺</span>
+                        <h3 class="text-sm font-extrabold text-[#f8fafc] uppercase tracking-wide">Ficha Médica Avanzada</h3>
+                    </div>
+                    <div id="medical-grid" class="space-y-3"></div>
+                    <p id="medical-empty" class="hidden text-sm text-slate-500 text-center py-4">El dueño no cargó datos médicos adicionales.</p>
+                </section>
+            </div>
+
+            <button type="button" id="btn-start-chat"
+                class="fade-up fade-up-delay-2 w-full min-h-[56px] bg-[#d97706] hover:bg-[#b45309] active:scale-[0.98] text-[#f8fafc] font-extrabold py-4 px-6 rounded-2xl transition shadow-lg shadow-amber-900/30 text-base flex items-center justify-center gap-2 shrink-0">
+                💬 Iniciar Chat Seguro con el Dueño
+            </button>
+        </main>
+
+        <footer id="main-footer" class="text-center text-[10px] text-slate-600 mt-6 px-4 shrink-0">
+            Honey App · Comunidad que cuida mascotas 💙🐾
+        </footer>
+    </div>
+
+    <!-- Chat a pantalla completa -->
+    <section id="panel-chat" class="hidden fixed inset-0 z-50 flex flex-col chat-shell bg-[#0f172a] max-w-md mx-auto left-0 right-0" role="dialog" aria-modal="true" aria-label="Chat seguro con el dueño">
+        <header class="shrink-0 bg-[#1e293b] border-b border-slate-700 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-lg">
+            <div class="flex items-center gap-2 mb-1">
+                <button type="button" id="btn-chat-back" class="text-slate-400 hover:text-[#d97706] text-sm font-semibold shrink-0" aria-label="Volver a la ficha">← Ficha</button>
+                <p class="flex-1 text-center text-sm font-extrabold text-[#f8fafc] leading-tight">🔒 Chat Seguro y Encriptado</p>
+                <span class="w-12 shrink-0"></span>
+            </div>
+            <p class="text-center text-[10px] text-[#d97706] font-bold">Honey App</p>
+            <p class="text-center text-[10px] text-slate-500 mt-1">Tu identidad y número están protegidos · sin teléfono ni WhatsApp</p>
+            <p id="chat-pet-label" class="text-center text-xs text-slate-400 mt-2 truncate"></p>
+        </header>
+
+        <div id="chat-messages" class="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0" role="log" aria-live="polite"></div>
+
+        <div id="chat-empty-hint" class="hidden px-4 pb-2 text-center text-xs text-slate-500">
+            Escribí un mensaje para avisarle al dueño de forma anónima.
+        </div>
+
+        <div class="shrink-0 border-t border-slate-700 bg-[#1e293b]/95 px-3 py-2 flex gap-2">
+            <button type="button" id="btn-gps" title="Compartir ubicación"
+                class="shrink-0 w-11 h-11 rounded-xl bg-[#243044] border border-slate-600 text-lg hover:border-[#d97706]/50 transition" aria-label="Compartir GPS">📍</button>
+            <label class="shrink-0 w-11 h-11 rounded-xl bg-[#243044] border border-slate-600 flex items-center justify-center text-lg hover:border-[#d97706]/50 transition cursor-pointer" aria-label="Adjuntar foto">
+                📷
+                <input id="input-photo" type="file" accept="image/*" capture="environment" class="hidden">
+            </label>
+            <img id="photo-preview-thumb" class="hidden w-11 h-11 rounded-xl object-cover border border-[#d97706]/50 shrink-0" alt="">
+        </div>
+
+        <form id="chat-form" class="shrink-0 flex gap-2 p-3 pt-2 bg-[#0f172a] border-t border-slate-800 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <input id="chat-input" type="text" maxlength="500" autocomplete="off" enterkeyhint="send"
+                placeholder="Escribí tu mensaje…"
+                class="flex-1 min-h-[48px] bg-[#1e293b] border border-slate-600 rounded-2xl px-4 py-3 text-sm text-[#f8fafc] placeholder-slate-500 focus:outline-none focus:border-[#d97706]">
+            <button type="submit" id="btn-send-chat"
+                class="shrink-0 min-h-[48px] min-w-[48px] px-4 rounded-2xl bg-[#d97706] hover:bg-[#b45309] text-white font-bold text-sm transition disabled:opacity-50">
+                Enviar
+            </button>
+        </form>
+    </section>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const QR_TOKEN = params.get("token")?.trim() || "";
+        const POLL_MS = 2500;
+        const SESSION_STORAGE_PREFIX = "honey_finder_chat_";
+
+        const FORBIDDEN_KEYS = ["phone", "whatsapp", "telefono", "tel", "mobile", "celular", "email"];
+
+        const START_CHAT_LABEL = "💬 Iniciar Chat Seguro con el Dueño";
+        const RESUME_CHAT_LABEL = "💬 Volver al Chat Seguro";
+
+        const state = {
+            sessionId: null,
+            pet: null,
+            chatActive: false,
+            pollTimer: null,
+            lastMessageFingerprint: "",
+            pendingPhoto: null,
+        };
+
+        const $ = (id) => document.getElementById(id);
+
+        function sessionStorageKey() {
+            return `${SESSION_STORAGE_PREFIX}${QR_TOKEN}`;
+        }
+
+        function loadPersistedSession() {
+            try {
+                const raw = localStorage.getItem(sessionStorageKey());
+                return raw ? JSON.parse(raw) : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function persistSession() {
+            if (!QR_TOKEN || !state.sessionId) return;
+            localStorage.setItem(sessionStorageKey(), JSON.stringify({
+                sessionId: state.sessionId,
+                pet: state.pet,
+                chatActive: state.chatActive,
+                savedAt: Date.now(),
+            }));
+        }
+
+        function clearPersistedSession() {
+            localStorage.removeItem(sessionStorageKey());
+        }
+
+        async function validateSession(sessionId) {
+            try {
+                const res = await fetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}/messages`);
+                if (!res.ok) return null;
+                const data = await res.json();
+                return data;
+            } catch {
+                return null;
+            }
+        }
+
+        function showPanel(id) {
+            ["panel-loading", "panel-no-token", "panel-pet"].forEach((pid) => {
+                $(pid).classList.toggle("hidden", pid !== id);
+            });
+        }
+
+        function showStatus(message, type = "info") {
+            const banner = $("statusBanner");
+            banner.className = "mx-4 max-w-md w-full self-center rounded-xl px-4 py-3 text-sm font-medium text-center border shrink-0";
+            const styles = {
+                success: ["bg-emerald-950/60", "text-emerald-300", "border-emerald-700"],
+                error: ["bg-red-950/60", "text-red-300", "border-red-800"],
+                info: ["bg-[#d97706]/15", "text-[#fbbf24]", "border-[#d97706]/40"],
+            };
+            banner.classList.add(...(styles[type] || styles.info));
+            banner.textContent = message;
+            banner.classList.remove("hidden");
+        }
+
+        function hideStatus() {
+            $("statusBanner").classList.add("hidden");
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function formatMessageTime(iso) {
+            try {
+                return new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+            } catch {
+                return "";
+            }
+        }
+
+        function sanitizePetPayload(raw) {
+            if (!raw || typeof raw !== "object") return null;
+            const safe = {};
+            for (const [key, value] of Object.entries(raw)) {
+                if (FORBIDDEN_KEYS.some((f) => key.toLowerCase().includes(f))) continue;
+                safe[key] = value;
+            }
+            return safe;
+        }
+
+        function messagesFingerprint(messages) {
+            if (!messages?.length) return "__empty__";
+            return messages.map((m) => `${m.id}:${m.createdAt}`).join("|");
+        }
+
+        function renderMedicalField(label, icon, value) {
+            const text = (value ?? "").trim();
+            if (!text) return "";
+            return `<div class="medical-row rounded-xl p-3">
+                <p class="text-[10px] font-bold text-[#d97706] uppercase tracking-wide mb-1">${icon} ${escapeHtml(label)}</p>
+                <p class="text-sm text-slate-200 leading-relaxed">${escapeHtml(text)}</p>
+            </div>`;
+        }
+
+        function renderMedicalRecord(pet) {
+            const rows = [
+                renderMedicalField("Señas particulares", "🔍", pet.distinguishingMarks),
+                renderMedicalField("Condición Médica", "🫀", pet.medicalConditions),
+                renderMedicalField("Medicación", "💊", pet.medications),
+                renderMedicalField("Alergias", "⚠️", pet.allergies),
+                renderMedicalField("Notas de Comportamiento", "🐾", pet.behavioralNotes),
+            ].filter(Boolean);
+
+            const grid = $("medical-grid");
+            const empty = $("medical-empty");
+            if (rows.length === 0) {
+                grid.innerHTML = "";
+                empty.classList.remove("hidden");
+            } else {
+                empty.classList.add("hidden");
+                grid.innerHTML = rows.join("");
+            }
+        }
+
+        function renderPetProfile(pet) {
+            $("pet-name").textContent = pet.name || "Mascota";
+            const metaParts = [pet.species, pet.breed, pet.sex, pet.size, pet.color, pet.age].filter(Boolean);
+            $("pet-meta").textContent = metaParts.length ? metaParts.join(" · ") : "Sin datos adicionales";
+            $("pet-finder-message").textContent = pet.finderMessage
+                ? `"${pet.finderMessage}"`
+                : "El dueño no dejó un mensaje público.";
+            $("chat-pet-label").textContent = pet.name ? `Mascota: ${pet.name}` : "";
+
+            const wrap = $("pet-photo-wrap");
+            const img = $("pet-photo");
+            if (pet.photoUrl) {
+                img.src = pet.photoUrl;
+                img.alt = `Foto de ${pet.name}`;
+                wrap.classList.remove("hidden");
+            } else {
+                wrap.classList.add("hidden");
+            }
+            renderMedicalRecord(pet);
+        }
+
+        function renderChatMessages(messages) {
+            const box = $("chat-messages");
+            const hint = $("chat-empty-hint");
+
+            if (!messages?.length) {
+                box.innerHTML = "";
+                hint.classList.remove("hidden");
+                return;
+            }
+
+            hint.classList.add("hidden");
+            box.innerHTML = messages.map((m) => {
+                const isOwner = m.sender === "owner";
+                const align = isOwner ? "justify-start" : "justify-end";
+                const bubble = isOwner ? "bubble-owner" : "bubble-finder";
+                const label = isOwner ? "Dueño (anónimo)" : "Vos";
+                const text = m.text || m.locationReference || "";
+                const img = m.imageUrl
+                    ? `<img src="${escapeHtml(m.imageUrl)}" alt="Adjunto" class="mt-2 rounded-lg max-h-40 w-full object-cover">`
+                    : "";
+
+                return `<div class="flex ${align}">
+                    <div class="max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm shadow-md ${bubble}">
+                        <p class="text-[10px] opacity-75 mb-0.5 font-semibold">${label}</p>
+                        ${text ? `<p class="leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(text)}</p>` : ""}
+                        ${img}
+                        <time class="block text-[9px] opacity-60 mt-1 text-right">${formatMessageTime(m.createdAt)}</time>
+                    </div>
+                </div>`;
+            }).join("");
+
+            requestAnimationFrame(() => {
+                box.scrollTop = box.scrollHeight;
+            });
+        }
+
+        async function fetchMessages() {
+            if (!state.sessionId) return null;
+            const res = await fetch(`/api/chat/sessions/${encodeURIComponent(state.sessionId)}/messages`);
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+            return data.messages ?? [];
+        }
+
+        async function pollMessages() {
+            if (!state.sessionId || !state.chatActive) return;
+            try {
+                const messages = await fetchMessages();
+                const fp = messagesFingerprint(messages);
+                if (fp !== state.lastMessageFingerprint) {
+                    state.lastMessageFingerprint = fp;
+                    renderChatMessages(messages);
+                }
+            } catch (err) {
+                console.warn("Poll chat:", err.message);
+            }
+        }
+
+        function startPolling() {
+            stopPolling();
+            state.pollTimer = setInterval(pollMessages, POLL_MS);
+        }
+
+        function stopPolling() {
+            if (state.pollTimer) {
+                clearInterval(state.pollTimer);
+                state.pollTimer = null;
+            }
+        }
+
+        function updateStartChatButton() {
+            const btn = $("btn-start-chat");
+            if (!btn) return;
+
+            btn.classList.remove("hidden", "opacity-70", "cursor-default", "is-chat-open");
+            btn.disabled = false;
+            btn.style.display = "flex";
+
+            if (state.chatActive) {
+                btn.classList.add("is-chat-open");
+                return;
+            }
+
+            btn.textContent = state.sessionId ? RESUME_CHAT_LABEL : START_CHAT_LABEL;
+        }
+
+        function releaseChatFocus() {
+            const active = document.activeElement;
+            const panel = $("panel-chat");
+            if (active && active !== document.body && panel?.contains(active)) {
+                active.blur();
+            }
+        }
+
+        function hideChatPanel(immediate = false) {
+            const panel = $("panel-chat");
+            releaseChatFocus();
+            panel.classList.remove("is-open");
+            panel.classList.add("panel-chat--hidden");
+
+            const applyHidden = () => {
+                panel.classList.add("hidden");
+                panel.classList.remove("panel-chat--hidden");
+            };
+
+            if (immediate) {
+                applyHidden();
+            } else {
+                setTimeout(applyHidden, 400);
+            }
+        }
+
+        function showFichaView() {
+            $("ficha-body").classList.remove("is-collapsed");
+            $("main-header").classList.remove("hidden");
+            $("main-footer").classList.remove("hidden");
+            hideChatPanel($("panel-chat").classList.contains("hidden"));
+            updateStartChatButton();
+        }
+
+        function showChatView(skipAnimation = false) {
+            $("ficha-body").classList.add("is-collapsed");
+            $("main-header").classList.add("hidden");
+            $("main-footer").classList.add("hidden");
+            hideStatus();
+
+            const panel = $("panel-chat");
+            panel.classList.remove("hidden", "panel-chat--hidden");
+            updateStartChatButton();
+
+            if (skipAnimation) {
+                panel.classList.add("is-open");
+            } else {
+                panel.classList.remove("is-open");
+                requestAnimationFrame(() => panel.classList.add("is-open"));
+            }
+        }
+
+        function openChatUI(skipAnimation = false) {
+            state.chatActive = true;
+            persistSession();
+            showChatView(skipAnimation);
+            startPolling();
+            pollMessages();
+            setTimeout(() => $("chat-input").focus(), 400);
+        }
+
+        function closeChatUI() {
+            state.chatActive = false;
+            persistSession();
+            stopPolling();
+            showFichaView();
+        }
+
+        async function activateChat() {
+            if (!state.sessionId) {
+                showStatus("No se pudo iniciar el chat. Reescaneá el QR.", "error");
+                return;
+            }
+            openChatUI();
+        }
+
+        async function restoreChatFromStorage() {
+            const cached = loadPersistedSession();
+            if (!cached?.sessionId || !cached?.pet) return false;
+
+            const data = await validateSession(cached.sessionId);
+            if (!data) {
+                clearPersistedSession();
+                return false;
+            }
+
+            state.sessionId = cached.sessionId;
+            state.pet = cached.pet;
+            renderPetProfile(state.pet);
+            showPanel("panel-pet");
+
+            if (cached.chatActive) {
+                openChatUI(true);
+                state.lastMessageFingerprint = messagesFingerprint(data.messages ?? []);
+                renderChatMessages(data.messages ?? []);
+                showStatus(`Conversación restaurada · ${state.pet.name}`, "success");
+            } else {
+                showFichaView();
+                showStatus(`Identificamos a ${state.pet.name}. Revisá la ficha médica antes de acercarte.`, "info");
+            }
+            return true;
+        }
+
+        async function loadQrData() {
+            if (!QR_TOKEN) {
+                showPanel("panel-no-token");
+                return;
+            }
+
+            if (await restoreChatFromStorage()) return;
+
+            showPanel("panel-loading");
+
+            try {
+                const res = await fetch(`/api/qr/${encodeURIComponent(QR_TOKEN)}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showPanel("panel-no-token");
+                    const msg = data.error || data.message || "No se pudo leer la chapita QR";
+                    showStatus(
+                        res.status === 404
+                            ? "Este código QR no es válido. Verificá que escaneaste la chapita correcta."
+                            : msg,
+                        "error",
+                    );
+                    return;
+                }
+
+                const pet = sanitizePetPayload(data.pet);
+                if (!pet) {
+                    showStatus("Respuesta inválida del servidor", "error");
+                    showPanel("panel-no-token");
+                    return;
+                }
+
+                const cached = loadPersistedSession();
+                let sessionId = data.contact?.sessionId ?? null;
+
+                if (cached?.sessionId) {
+                    const valid = await validateSession(cached.sessionId);
+                    if (valid) sessionId = cached.sessionId;
+                }
+
+                state.pet = pet;
+                state.sessionId = sessionId;
+                persistSession();
+
+                renderPetProfile(pet);
+                showPanel("panel-pet");
+                showFichaView();
+                showStatus(`Identificamos a ${pet.name}. Revisá la ficha médica antes de acercarte.`, "info");
+            } catch (err) {
+                console.error(err);
+                showPanel("panel-no-token");
+                showStatus("Sin conexión al servidor. Revisá tu red.", "error");
+            }
+        }
+
+        async function sendChatMessage({ text = "", photoFile = null, locationReference = "" } = {}) {
+            if (!state.sessionId || !state.chatActive) {
+                showStatus("El chat no está activo.", "error");
+                return false;
+            }
+
+            const trimmed = text.trim();
+            if (!trimmed && !photoFile && !locationReference) return false;
+
+            const formData = new FormData();
+            if (trimmed) formData.append("text", trimmed);
+            if (locationReference) formData.append("locationReference", locationReference);
+            if (photoFile) formData.append("image", photoFile);
+
+            const res = await fetch(`/api/chat/sessions/${encodeURIComponent(state.sessionId)}/messages`, {
+                method: "POST",
+                body: formData,
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                showStatus(data.error || "Error al enviar mensaje", "error");
+                return false;
+            }
+
+            state.lastMessageFingerprint = "";
+            await pollMessages();
+            return true;
+        }
+
+        async function sendGpsAlert(latitude, longitude, accuracy) {
+            const btn = $("btn-gps");
+            btn.disabled = true;
+
+            try {
+                const payload = { qrToken: QR_TOKEN, latitude, longitude };
+                if (accuracy != null) payload.accuracy = accuracy;
+
+                const res = await fetch("/api/alerts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showStatus(data.error || "Error al enviar ubicación", "error");
+                    return;
+                }
+
+                await sendChatMessage({
+                    locationReference: `📍 Ubicación GPS compartida (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`,
+                });
+
+                btn.textContent = "✓";
+                btn.classList.add("border-emerald-500", "text-emerald-400");
+            } catch (err) {
+                console.error(err);
+                showStatus("Error de red al enviar GPS", "error");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        $("btn-start-chat").addEventListener("click", activateChat);
+        $("btn-chat-back").addEventListener("click", closeChatUI);
+
+        $("btn-gps").addEventListener("click", () => {
+            if (!state.chatActive) return;
+            if (!navigator.geolocation) {
+                showStatus("Tu navegador no soporta geolocalización", "error");
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => sendGpsAlert(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+                () => showStatus("Activá el permiso de ubicación", "error"),
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+            );
+        });
+
+        $("input-photo").addEventListener("change", (e) => {
+            const file = e.target.files?.[0];
+            state.pendingPhoto = file ?? null;
+            const thumb = $("photo-preview-thumb");
+            if (!file) {
+                thumb.classList.add("hidden");
+                thumb.src = "";
+                return;
+            }
+            thumb.src = URL.createObjectURL(file);
+            thumb.classList.remove("hidden");
+        });
+
+        $("chat-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const input = $("chat-input");
+            const btn = $("btn-send-chat");
+            const text = input.value.trim();
+            const photo = state.pendingPhoto;
+
+            if (!text && !photo) return;
+
+            btn.disabled = true;
+            const ok = await sendChatMessage({
+                text,
+                photoFile: photo,
+                locationReference: !text && photo ? "Evidencia visual enviada desde la calle" : "",
+            });
+
+            if (ok) {
+                input.value = "";
+                $("input-photo").value = "";
+                state.pendingPhoto = null;
+                $("photo-preview-thumb").classList.add("hidden");
+            }
+            btn.disabled = false;
+            input.focus();
+        });
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && state.chatActive) pollMessages();
+        });
+
+        window.addEventListener("beforeunload", stopPolling);
+
+        loadQrData();
+    </script>
+</body>
+</html>

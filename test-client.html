@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Honey-app — Chat bidireccional MVP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            honey: { 50: "#fffbeb", 100: "#fef3c7", 400: "#fbbf24", 500: "#f59e0b", 600: "#d97706" },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    .map-grid {
+      background-color: #e8f4ea;
+      background-image: linear-gradient(#c8e6c9 1px, transparent 1px), linear-gradient(90deg, #c8e6c9 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .console-scroll::-webkit-scrollbar, .chat-scroll::-webkit-scrollbar { width: 5px; }
+    .console-scroll::-webkit-scrollbar-thumb, .chat-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
+    @keyframes slideInPush { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOutPush { from { opacity: 1; } to { opacity: 0; transform: translateY(-8px); } }
+    .push-enter { animation: slideInPush 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .push-exit  { animation: fadeOutPush 0.35s ease forwards; }
+    .cyber-upload {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      border: 1px solid #22d3ee44;
+      box-shadow: 0 0 12px #22d3ee22, inset 0 0 20px #0891b211;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .cyber-upload:hover, .cyber-upload:focus-within {
+      border-color: #22d3ee;
+      box-shadow: 0 0 18px #22d3ee44, inset 0 0 24px #0891b222;
+    }
+    .cyber-upload input[type="file"] { color: #67e8f9; }
+    .cyber-upload input[type="file"]::file-selector-button {
+      margin-right: 0.75rem;
+      border: 1px solid #22d3ee66;
+      background: #0e7490;
+      color: #ecfeff;
+      padding: 0.35rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cyber-upload input[type="file"]::file-selector-button:hover { background: #0891b2; }
+    .chat-thread { background: linear-gradient(180deg, #e8edf2 0%, #dfe6ec 100%); }
+    .chat-bubble { box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+    .chat-bubble-finder { background: #fff; color: #1e293b; border-radius: 18px 18px 18px 4px; }
+    .chat-bubble-owner { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #fff; border-radius: 18px 18px 4px 18px; }
+    .chat-media { display: block; max-width: 100%; max-height: 220px; border-radius: 12px; object-fit: cover; cursor: zoom-in; border: 2px solid rgba(255,255,255,.25); }
+    .chat-bubble-finder .chat-media { border-color: rgba(15,23,42,.08); }
+    .global-panel { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%); }
+    .alert-card-enter { animation: alertIn .35s ease forwards; }
+    @keyframes alertIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-800">
+
+  <header class="border-b border-slate-200 bg-white shadow-sm">
+    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+      <div class="flex items-center gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-honey-400 text-lg font-bold text-white shadow">H</div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900">Honey-app</h1>
+          <p class="text-xs text-slate-500">MVP adopción · 6 jun · Fases 2+3</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 text-sm">
+        <input id="apiBase" type="text" value="http://localhost:3000" class="w-44 rounded-lg border border-slate-300 px-2 py-1.5 text-xs font-mono sm:w-56" />
+        <button id="btnReload" type="button" class="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700">Recargar QR</button>
+        <span id="pollIndicator" class="hidden rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">● chat</span>
+        <span id="alertsPollIndicator" class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">● Smart Tech</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- FASE 2 — Centro de Monitoreo Global -->
+  <section class="global-panel mx-auto max-w-7xl px-4 py-4 text-white shadow-lg">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-3">
+      <div>
+        <p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-300">Smart Tech · Fase 2</p>
+        <h2 class="text-lg font-bold">Centro de Monitoreo Global</h2>
+        <p class="text-xs text-violet-200/80">Mascotas en Modo Alerta (isLost) · actualización cada 3 s</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="globalAlertsCount" class="rounded-full bg-red-500 px-3 py-1 text-sm font-bold shadow-lg ring-2 ring-red-300">0</span>
+        <span class="text-xs text-violet-200">alertas activas</span>
+      </div>
+    </div>
+    <div id="globalAlertsList" class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3"></div>
+    <p id="globalAlertsEmpty" class="mt-4 rounded-xl border border-dashed border-white/20 py-8 text-center text-sm text-violet-200">
+      ✓ No hay mascotas perdidas en este momento — panel en vigilancia
+    </p>
+  </section>
+
+  <main class="mx-auto grid max-w-7xl gap-5 px-4 py-5 xl:grid-cols-3">
+
+    <!-- PANTALLA A — Vecino -->
+    <section class="space-y-3">
+      <div class="flex items-center gap-2">
+        <span class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">A</span>
+        <h2 class="text-sm font-semibold">Vecino en la calle</h2>
+      </div>
+      <div class="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md" style="height: calc(100vh - 8.5rem); min-height: 560px;">
+        <div class="bg-gradient-to-r from-honey-500 to-honey-600 px-4 py-2.5 text-white">
+          <p class="text-[10px] uppercase tracking-wide opacity-90">QR escaneado</p>
+          <p id="qrTokenLabel" class="truncate font-mono text-xs">demo-qr-token-abc123</p>
+        </div>
+
+        <div id="petLoading" class="flex items-center gap-2 px-4 py-4 text-xs text-slate-500">
+          <svg class="h-4 w-4 animate-spin text-honey-500" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+          Conectando…
+        </div>
+
+        <div id="petCard" class="hidden border-b border-slate-100 px-4 py-3">
+          <div class="flex items-center gap-3">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-2xl">🐕</div>
+            <div>
+              <h3 id="petName" class="font-bold text-slate-900">—</h3>
+              <p id="petMeta" class="text-xs text-slate-500">—</p>
+            </div>
+          </div>
+          <div class="map-grid relative mt-2 h-24 overflow-hidden rounded-lg border border-emerald-200">
+            <div id="gpsMapLabel" class="absolute bottom-1 left-1 right-1 rounded bg-white/95 px-1.5 py-1 text-[10px] font-medium text-slate-700 shadow">
+              <span id="gpsStatusText">📡 Solicitando GPS de alta precisión…</span>
+            </div>
+          </div>
+          <button id="btnCapturarGps" type="button" class="mt-2 w-full rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1.5 text-[11px] font-medium text-emerald-800 hover:bg-emerald-100">
+            🔄 Volver a capturar mi ubicación
+          </button>
+        </div>
+
+        <!-- Chat vecino -->
+        <div id="finderChat" class="chat-scroll chat-thread flex-1 space-y-3 overflow-y-auto px-3 py-4">
+          <p class="text-center text-[11px] text-slate-500">Chat en vivo · cada 3 s</p>
+        </div>
+
+        <form id="messageForm" class="border-t border-slate-200 bg-white p-3 space-y-2">
+          <textarea id="msgText" rows="2" placeholder="Hola, encontré a tu mascota…" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-honey-500 focus:outline-none focus:ring-2 focus:ring-honey-400/30"></textarea>
+          <input id="msgLocation" type="text" value="Lo vi en Plaza Los Andes" class="w-full rounded-xl border border-slate-300 px-3 py-2 text-xs focus:border-honey-500 focus:outline-none" />
+          <label class="cyber-upload block cursor-pointer rounded-xl px-3 py-2.5">
+            <p class="mb-1 text-[10px] font-semibold uppercase tracking-widest text-cyan-300">📷 Adjuntar evidencia visual</p>
+            <input id="msgImage" type="file" accept="image/*" class="w-full text-xs file:mr-3" />
+            <p id="imagePreviewLabel" class="mt-1 truncate text-[10px] text-cyan-200/70">Sin imagen seleccionada</p>
+            <img id="imagePreview" class="mt-2 hidden max-h-24 rounded-lg border border-cyan-400/30 object-cover" alt="Vista previa" />
+          </label>
+          <button id="btnSend" type="submit" disabled class="w-full rounded-xl bg-honey-500 py-2.5 text-sm font-semibold text-white hover:bg-honey-600 disabled:opacity-50">Enviar al dueño</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- PANTALLA C — Dueño -->
+    <section class="space-y-3">
+      <div class="flex items-center gap-2">
+        <span class="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700">B</span>
+        <h2 class="text-sm font-semibold">Dueño (app móvil simulada)</h2>
+      </div>
+      <div class="flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-md" style="height: calc(100vh - 8.5rem); min-height: 560px;">
+        <div class="border-b border-slate-100 bg-sky-50 px-4 py-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="text-xs font-semibold text-sky-900">
+                  María García · <span id="ownerHeaderPetName">Luna</span>
+                </p>
+                <span id="ownerPetStatusBadge" class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+                  ✓ A salvo
+                </span>
+              </div>
+              <p class="text-[10px] text-sky-600">demo: dueno@ejemplo.com / demo1234</p>
+            </div>
+            <button id="btnLogin" type="button" class="shrink-0 rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-700">Login JWT</button>
+          </div>
+          <button id="btnToggleLost" type="button" disabled
+            class="mt-2 w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50">
+            🚨 Activar Modo Alerta (PERDIDA)
+          </button>
+          <div class="mt-2 rounded-lg bg-white px-2 py-1.5">
+            <p class="text-[10px] font-medium text-slate-500">JWT (simulado)</p>
+            <p id="jwtDisplay" class="truncate font-mono text-[10px] text-slate-600">— sin autenticar —</p>
+          </div>
+          <div class="mt-1 rounded-lg bg-white px-2 py-1.5">
+            <p class="text-[10px] font-medium text-slate-500">sessionId (sync con vecino)</p>
+            <p id="ownerSessionId" class="break-all font-mono text-[10px] text-slate-600">—</p>
+          </div>
+        </div>
+
+        <div id="ownerLocationAlert" class="hidden border-b border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3">
+          <div class="flex items-start gap-2">
+            <span class="text-lg">📍</span>
+            <div class="min-w-0 flex-1">
+              <p class="text-xs font-bold text-amber-900">
+                Alerta GPS · <span id="ownerAlertPetName">Luna</span>
+                <span id="ownerLostBadge" class="ml-1 hidden rounded-full bg-red-500 px-1.5 py-0.5 text-[9px] font-semibold text-white">PERDIDA</span>
+              </p>
+              <p id="ownerLocationCoords" class="mt-0.5 font-mono text-[11px] text-amber-800">—</p>
+              <p class="mt-1 text-[10px] text-amber-700">Último reporte del vecino (actualización en vivo)</p>
+              <a id="ownerLocationMapLink" href="#" target="_blank" rel="noopener"
+                class="mt-1 inline-block text-[10px] font-semibold text-sky-700 underline hover:text-sky-900">
+                Abrir en mapa →
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div id="ownerLocationEmpty" class="border-b border-slate-100 bg-slate-50 px-4 py-2 text-center text-[10px] text-slate-400">
+          Esperando ubicación GPS del vecino…
+        </div>
+
+        <div id="ownerChat" class="chat-scroll chat-thread flex-1 space-y-3 overflow-y-auto px-3 py-4">
+          <p class="text-center text-[11px] text-slate-500">Chat en vivo · cada 3 s</p>
+        </div>
+
+        <form id="replyForm" class="border-t border-slate-200 bg-white p-3 space-y-2">
+          <textarea id="replyText" rows="2" placeholder="Gracias, ya voy para allá…" disabled class="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:outline-none disabled:bg-slate-50"></textarea>
+          <button id="btnReply" type="submit" disabled class="w-full rounded-xl bg-sky-600 py-2.5 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50">Responder al vecino</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- PANTALLA — Consola -->
+    <section class="space-y-3 xl:col-span-1">
+      <div class="flex items-center gap-2">
+        <span class="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-700">C</span>
+        <h2 class="text-sm font-semibold">Consola de red</h2>
+        <button id="btnClearConsole" type="button" class="ml-auto text-[10px] text-slate-500 hover:text-slate-800">limpiar</button>
+      </div>
+      <div class="flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-xl" style="height: calc(100vh - 8.5rem); min-height: 560px;">
+        <div class="border-b border-slate-700 px-3 py-2 font-mono text-[10px] text-slate-400">honey-app / network log</div>
+        <div id="console" class="console-scroll flex-1 overflow-y-auto p-3 font-mono text-[11px] leading-relaxed"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="pushContainer" class="pointer-events-none fixed bottom-5 right-5 z-50 flex w-72 flex-col gap-2"></div>
+
+  <script>
+    const DEMO_QR_TOKEN = "demo-qr-token-abc123";
+    const POLL_MS = 3000;
+    const ALERTS_POLL_MS = 3000;
+    const DEMO_CREDENTIALS = { email: "dueno@ejemplo.com", password: "demo1234" };
+
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      sessionId: null,
+      qrToken: DEMO_QR_TOKEN,
+      petName: "Luna",
+      petId: null,
+      petIsLost: false,
+      ownerName: "María García",
+      jwt: null,
+      lastMessageCount: 0,
+      pollTimer: null,
+      alertsPollTimer: null,
+      lastAlertsKey: "",
+      neighborGps: null,
+      petLocation: null,
+    };
+
+    function apiBase() { return $("apiBase").value.replace(/\/$/, ""); }
+    function now() { return new Date().toLocaleTimeString("es-AR", { hour12: false }); }
+
+    function logConsole(type, title, body) {
+      const colors = { req: "text-sky-400", res: "text-emerald-400", err: "text-red-400", info: "text-slate-400", push: "text-honey-400", poll: "text-violet-400" };
+      const el = $("console");
+      const block = document.createElement("div");
+      block.className = "mb-3 border-b border-slate-800 pb-3";
+      block.innerHTML = `<div class="mb-0.5 ${colors[type] || "text-slate-400"}">[${now()}] ${title}</div><pre class="whitespace-pre-wrap break-all text-slate-300">${body}</pre>`;
+      el.appendChild(block);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function resolveAssetUrl(url) {
+      if (!url) return null;
+      if (url.startsWith("http")) return url;
+      return `${apiBase()}${url}`;
+    }
+
+    function formatMessageBody(msg) {
+      const parts = [];
+      if (msg.text) parts.push(msg.text);
+      if (msg.locationReference) parts.push(`📍 ${msg.locationReference}`);
+      return parts.join("\n");
+    }
+
+    function renderMessageContent(msg, isOwner) {
+      const textBlock = formatMessageBody(msg);
+      const imgSrc = resolveAssetUrl(msg.imageUrl);
+      let html = "";
+
+      if (textBlock) {
+        html += `<p class="whitespace-pre-wrap text-[13px] leading-relaxed">${escapeHtml(textBlock)}</p>`;
+      }
+
+      if (imgSrc) {
+        html += `
+          <div class="chat-media-wrap ${textBlock ? "mt-2" : ""}">
+            <p class="mb-1 text-[9px] font-semibold uppercase tracking-wide opacity-70">Evidencia visual</p>
+            <a href="${escapeHtml(imgSrc)}" target="_blank" rel="noopener" title="Ampliar imagen">
+              <img src="${escapeHtml(imgSrc)}" alt="Evidencia del vecino" class="chat-media" loading="lazy"
+                onerror="this.alt='Error al cargar imagen'; this.classList.add('opacity-50');" />
+            </a>
+          </div>`;
+      }
+
+      if (!html) {
+        html = `<p class="text-[12px] italic opacity-60">Mensaje vacío</p>`;
+      }
+
+      return html;
+    }
+
+    function renderBubbles(containerId, messages) {
+      const el = $(containerId);
+      if (!messages?.length) {
+        el.innerHTML = `<p class="text-center text-[11px] text-slate-500">Sin mensajes — escribí o adjuntá una foto</p>`;
+        return;
+      }
+
+      el.innerHTML = messages.map((msg) => {
+        const isOwner = msg.sender === "owner";
+        const align = isOwner ? "justify-end" : "justify-start";
+        const bubbleClass = isOwner ? "chat-bubble chat-bubble-owner" : "chat-bubble chat-bubble-finder";
+        const label = isOwner ? "Dueño" : "Vecino";
+        const time = new Date(msg.createdAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+
+        return `
+          <div class="flex ${align} mb-1">
+            <div class="max-w-[88%] min-w-0">
+              <p class="mb-1 px-1 text-[10px] font-medium ${isOwner ? "text-right text-sky-600" : "text-slate-500"}">${label}</p>
+              <div class="${bubbleClass} px-3 py-2.5">${renderMessageContent(msg, isOwner)}</div>
+              <p class="mt-0.5 px-1 text-[9px] ${isOwner ? "text-right text-slate-400" : "text-slate-400"}">${time}</p>
+            </div>
+          </div>`;
+      }).join("");
+
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function renderGlobalAlerts(alerts) {
+      const list = $("globalAlertsList");
+      const empty = $("globalAlertsEmpty");
+      const countEl = $("globalAlertsCount");
+
+      countEl.textContent = String(alerts.length);
+
+      if (!alerts.length) {
+        list.innerHTML = "";
+        empty.classList.remove("hidden");
+        return;
+      }
+
+      empty.classList.add("hidden");
+      list.innerHTML = alerts.map((pet) => {
+        const photo = resolveAssetUrl(pet.photoUrl);
+        const hasCoords = pet.lastLat != null && pet.lastLng != null;
+        const lat = hasCoords ? Number(pet.lastLat) : null;
+        const lng = hasCoords ? Number(pet.lastLng) : null;
+        const mapUrl = hasCoords
+          ? `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`
+          : "#";
+        const coordsText = hasCoords
+          ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+          : "Sin GPS registrado aún";
+
+        const photoHtml = photo
+          ? `<img src="${escapeHtml(photo)}" alt="${escapeHtml(pet.name)}" class="h-20 w-20 shrink-0 rounded-xl object-cover ring-2 ring-red-400/50" />`
+          : `<div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl bg-slate-700 text-3xl ring-2 ring-red-400/50">🐕</div>`;
+
+        return `
+          <article class="alert-card-enter flex gap-3 rounded-xl border border-red-400/40 bg-white/10 p-3 backdrop-blur-sm" data-pet-id="${escapeHtml(pet.id)}">
+            ${photoHtml}
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <h3 class="font-bold text-white">${escapeHtml(pet.name)}</h3>
+                <span class="rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-bold uppercase text-white animate-pulse">PERDIDA</span>
+              </div>
+              <p class="text-[10px] text-violet-200">${escapeHtml([pet.species, pet.breed].filter(Boolean).join(" · ") || "Mascota")} · Dueño: ${escapeHtml(pet.user?.name || "—")}</p>
+              <p class="mt-1 font-mono text-[11px] text-amber-200">📍 ${coordsText}</p>
+              <a href="${mapUrl}" target="_blank" rel="noopener"
+                class="mt-2 inline-flex items-center gap-1 rounded-lg bg-sky-500 px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-sky-400 ${hasCoords ? "" : "pointer-events-none opacity-40"}">
+                🗺️ Abrir en mapa
+              </a>
+            </div>
+          </article>`;
+      }).join("");
+    }
+
+    async function pollActiveAlerts(isInterval) {
+      const url = `${apiBase()}/api/alerts/active`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok) {
+          if (!isInterval) logConsole("err", `← GET alerts ${res.status}`, JSON.stringify(data, null, 2));
+          return;
+        }
+
+        const alerts = data.alerts ?? [];
+        const key = alerts.map((p) => `${p.id}:${p.isLost}:${p.lastLat}:${p.lastLng}`).join("|");
+
+        if (key !== state.lastAlertsKey) {
+          if (isInterval && state.lastAlertsKey) {
+            logConsole("poll", `← Smart Tech: ${alerts.length} alerta(s)`, "panel actualizado");
+          }
+          state.lastAlertsKey = key;
+          renderGlobalAlerts(alerts);
+        }
+      } catch (err) {
+        if (!isInterval) logConsole("err", "← alerts poll", String(err.message || err));
+      }
+    }
+
+    function startAlertsPolling() {
+      if (state.alertsPollTimer) clearInterval(state.alertsPollTimer);
+      pollActiveAlerts(false);
+      state.alertsPollTimer = setInterval(() => pollActiveAlerts(true), ALERTS_POLL_MS);
+    }
+
+    function stopAlertsPolling() {
+      if (state.alertsPollTimer) clearInterval(state.alertsPollTimer);
+      state.alertsPollTimer = null;
+    }
+
+    function resolveImageUrl(imageUrl) {
+      return resolveAssetUrl(imageUrl);
+    }
+
+    function showPushNotification({ petName, ownerName, sessionId, text, locationReference, imageUrl }) {
+      const parts = [];
+      if (text) parts.push(`"${text}"`);
+      if (locationReference) parts.push(`📍 ${locationReference}`);
+      if (imageUrl) parts.push("📷 foto adjunta");
+      const preview = parts.join(" · ") || "(sin contenido)";
+
+      logConsole("push", "→ PUSH simulada (dueño)", `Dueño de ${petName}: ${preview}`);
+
+      const card = document.createElement("div");
+      card.className = "push-enter pointer-events-auto overflow-hidden rounded-2xl border bg-white shadow-2xl";
+      card.innerHTML = `
+        <div class="flex items-center gap-2 bg-slate-900 px-3 py-2">
+          <div class="flex h-5 w-5 items-center justify-center rounded bg-honey-500 text-[9px] font-bold text-white">H</div>
+          <span class="text-[11px] font-semibold text-white">Honey-app</span>
+        </div>
+        <div class="px-3 py-2">
+          <p class="text-[11px] font-semibold">Dueño de ${escapeHtml(petName)}</p>
+          <p class="text-[10px] text-slate-600">${escapeHtml(preview)}</p>
+        </div>`;
+      $("pushContainer").prepend(card);
+      setTimeout(() => { card.classList.replace("push-enter", "push-exit"); setTimeout(() => card.remove(), 350); }, 5000);
+    }
+
+    function updateGpsUi() {
+      const el = $("gpsStatusText");
+      if (!el) return;
+
+      if (!state.neighborGps) {
+        el.textContent = "📡 Solicitando GPS de alta precisión…";
+        el.className = "text-slate-600";
+        return;
+      }
+
+      const { latitude, longitude, accuracy } = state.neighborGps;
+      const accLabel = accuracy != null ? ` ±${Math.round(accuracy)}m` : "";
+      el.textContent = `📍 ${latitude.toFixed(6)}, ${longitude.toFixed(6)}${accLabel}`;
+      el.className = "text-emerald-800 font-mono";
+    }
+
+  /**
+   * Stub preparado para la próxima sesión de rastreo satelital.
+   * Hoy: persiste en estado local y registra en consola.
+   * Mañana: POST al endpoint GPS del backend (p. ej. scans o lastLat/lastLng).
+   */
+    async function enviarGpsAlBackend(latitude, longitude, accuracy) {
+      state.neighborGps = {
+        latitude,
+        longitude,
+        accuracy: accuracy ?? null,
+        capturedAt: new Date().toISOString(),
+      };
+      updateGpsUi();
+
+      const token = state.qrToken;
+      const url = `${apiBase()}/api/qr/${token}/scans`;
+      const payload = { latitude, longitude };
+      if (accuracy != null) payload.accuracy = accuracy;
+
+      logConsole("req", `POST ${url}`, JSON.stringify(payload, null, 2));
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          console.error("Error al enviar GPS:", data);
+          logConsole("err", `← GPS ${res.status}`, JSON.stringify(data, null, 2));
+          return;
+        }
+
+        console.log("✓ GPS enviado e impactado en Backend:", data);
+        logConsole(
+          "info",
+          "✓ Ubicación enviada",
+          `Lat: ${latitude}, Lng: ${longitude}\n${JSON.stringify(data.petLocation ?? data.scan, null, 2)}`,
+        );
+      } catch (err) {
+        console.error("Error al enviar GPS:", err);
+        logConsole("err", "GPS envío", String(err.message || err));
+      }
+    }
+
+    const capturarUbicacionVecino = () => {
+      if (!navigator.geolocation) {
+        console.error("El navegador no soporta geolocalización.");
+        logConsole("err", "GPS", "El navegador no soporta geolocalización.");
+        $("gpsStatusText").textContent = "⚠️ GPS no disponible en este navegador";
+        return;
+      }
+
+      $("gpsStatusText").textContent = "📡 Capturando GPS (alta precisión)…";
+      $("btnCapturarGps").disabled = true;
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+          console.log("GPS Capturado:", latitude, longitude);
+          logConsole("info", "GPS capturado", `lat: ${latitude}\nlng: ${longitude}\naccuracy: ${accuracy ?? "n/d"}m`);
+          enviarGpsAlBackend(latitude, longitude, accuracy);
+          $("btnCapturarGps").disabled = false;
+        },
+        (error) => {
+          console.error("Error de GPS o permiso denegado:", error.message);
+          logConsole("err", "GPS", error.message);
+          $("gpsStatusText").textContent = `⚠️ GPS: ${error.message}`;
+          $("btnCapturarGps").disabled = false;
+        },
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    };
+
+    function updateOwnerPetStatus(pet) {
+      if (!pet) return;
+
+      if (pet.id) state.petId = pet.id;
+      state.petIsLost = Boolean(pet.isLost);
+      state.petName = pet.name || state.petName;
+
+      $("ownerHeaderPetName").textContent = state.petName;
+
+      const badge = $("ownerPetStatusBadge");
+      const toggleBtn = $("btnToggleLost");
+
+      if (state.petIsLost) {
+        badge.textContent = "⚠ PERDIDA";
+        badge.className =
+          "rounded-full bg-red-600 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-white shadow-md ring-2 ring-red-400 animate-pulse";
+        $("ownerLostBadge").classList.remove("hidden");
+        toggleBtn.textContent = "✓ Marcar como encontrada (A salvo)";
+        toggleBtn.className =
+          "mt-2 w-full rounded-lg border border-emerald-400 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50";
+      } else {
+        badge.textContent = "✓ A salvo";
+        badge.className =
+          "rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800";
+        $("ownerLostBadge").classList.add("hidden");
+        toggleBtn.textContent = "🚨 Activar Modo Alerta (PERDIDA)";
+        toggleBtn.className =
+          "mt-2 w-full rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-[11px] font-semibold text-red-800 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50";
+      }
+
+      toggleBtn.disabled = !state.jwt || !state.petId;
+    }
+
+    function updateOwnerLocationAlert(pet) {
+      if (!pet) return;
+
+      updateOwnerPetStatus(pet);
+
+      const hasCoords =
+        pet.lastLat != null &&
+        pet.lastLng != null &&
+        !Number.isNaN(Number(pet.lastLat)) &&
+        !Number.isNaN(Number(pet.lastLng));
+
+      if (!hasCoords) {
+        $("ownerLocationAlert").classList.add("hidden");
+        $("ownerLocationEmpty").classList.remove("hidden");
+        return;
+      }
+
+      const lat = Number(pet.lastLat);
+      const lng = Number(pet.lastLng);
+      const prev = state.petLocation;
+      const changed =
+        !prev || prev.lastLat !== lat || prev.lastLng !== lng;
+
+      state.petLocation = { lastLat: lat, lastLng: lng, isLost: pet.isLost };
+
+      $("ownerAlertPetName").textContent = pet.name || state.petName;
+      $("ownerLocationCoords").textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+      $("ownerLocationMapLink").href =
+        `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=17/${lat}/${lng}`;
+
+      $("ownerLocationAlert").classList.remove("hidden");
+      $("ownerLocationEmpty").classList.add("hidden");
+
+      if (changed) {
+        $("ownerLocationAlert").classList.add("ring-2", "ring-amber-400");
+        setTimeout(
+          () => $("ownerLocationAlert").classList.remove("ring-2", "ring-amber-400"),
+          1500,
+        );
+      }
+    }
+
+    function syncSessionUi() {
+      $("ownerSessionId").textContent = state.sessionId || "—";
+      const canReply = Boolean(state.sessionId && state.jwt);
+      $("replyText").disabled = !canReply;
+      $("btnReply").disabled = !canReply;
+      $("btnToggleLost").disabled = !state.jwt || !state.petId;
+    }
+
+    function startPolling() {
+      if (state.pollTimer) clearInterval(state.pollTimer);
+      if (!state.sessionId) return;
+      $("pollIndicator").classList.remove("hidden");
+      pollMessages(false);
+      state.pollTimer = setInterval(() => pollMessages(true), POLL_MS);
+    }
+
+    function stopPolling() {
+      if (state.pollTimer) clearInterval(state.pollTimer);
+      state.pollTimer = null;
+      $("pollIndicator").classList.add("hidden");
+    }
+
+    async function pollMessages(isInterval) {
+      if (!state.sessionId) return;
+      const url = `${apiBase()}/api/chat/sessions/${state.sessionId}/messages`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok) {
+          if (!isInterval) logConsole("err", `← GET messages ${res.status}`, JSON.stringify(data, null, 2));
+          return;
+        }
+        const count = data.messages?.length ?? 0;
+        if (count !== state.lastMessageCount) {
+          if (isInterval) logConsole("poll", `← ${count} mensaje(s) en sesión`, "(actualización automática)");
+          state.lastMessageCount = count;
+        }
+
+        if (data.pet) {
+          updateOwnerPetStatus(data.pet);
+          updateOwnerLocationAlert(data.pet);
+        }
+
+        renderBubbles("finderChat", data.messages);
+        renderBubbles("ownerChat", data.messages);
+      } catch (err) {
+        if (!isInterval) logConsole("err", "← poll error", String(err.message || err));
+      }
+    }
+
+    async function loadQrSession() {
+      stopPolling();
+      state.sessionId = null;
+      state.lastMessageCount = 0;
+      $("petLoading").classList.remove("hidden");
+      $("petCard").classList.add("hidden");
+      $("btnSend").disabled = true;
+      syncSessionUi();
+
+      const url = `${apiBase()}/api/qr/${DEMO_QR_TOKEN}`;
+      logConsole("req", `GET ${url}`, "Escaneo QR simulado");
+
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (!res.ok) {
+          logConsole("err", `← ${res.status}`, JSON.stringify(data, null, 2));
+          $("petLoading").innerHTML = `<span class="text-red-500">Error ${res.status}</span>`;
+          return;
+        }
+        logConsole("res", `← ${res.status} OK`, JSON.stringify(data, null, 2));
+
+        state.sessionId = data.contact.sessionId;
+        state.qrToken = DEMO_QR_TOKEN;
+        state.petId = data.pet.id ?? null;
+        state.petName = data.pet.name;
+        state.ownerName = data.contact.ownerName;
+
+        $("petName").textContent = data.pet.name;
+        $("petMeta").textContent = [data.pet.species, data.pet.breed].filter(Boolean).join(" · ");
+        $("petLoading").classList.add("hidden");
+        $("petCard").classList.remove("hidden");
+        $("btnSend").disabled = false;
+        syncSessionUi();
+        startPolling();
+        capturarUbicacionVecino();
+        logConsole("info", "✓ Sesión activa", `sessionId: ${state.sessionId}`);
+      } catch (err) {
+        logConsole("err", "← red", String(err.message || err));
+        $("petLoading").innerHTML = `<span class="text-red-500">Sin conexión al backend</span>`;
+      }
+    }
+
+    async function toggleLostAlert() {
+      if (!state.jwt || !state.petId) {
+        logConsole("err", "Modo Alerta", "Hacé Login JWT primero y esperá que cargue la mascota.");
+        return;
+      }
+
+      const url = `${apiBase()}/api/owner/pets/${state.petId}/toggle-alert`;
+      logConsole("req", `POST ${url}`, "toggle isLost");
+
+      $("btnToggleLost").disabled = true;
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${state.jwt}` },
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          logConsole("err", `← toggle ${res.status}`, JSON.stringify(data, null, 2));
+          return;
+        }
+
+        logConsole("res", "← toggle OK", JSON.stringify(data, null, 2));
+
+        if (data.pet) {
+          updateOwnerPetStatus(data.pet);
+        }
+
+        await pollMessages(false);
+        await pollActiveAlerts(false);
+      } catch (err) {
+        logConsole("err", "← toggle red", String(err.message || err));
+      } finally {
+        $("btnToggleLost").disabled = !state.jwt || !state.petId;
+      }
+    }
+
+    async function ownerLogin() {
+      const url = `${apiBase()}/api/auth/login`;
+      logConsole("req", `POST ${url}`, JSON.stringify(DEMO_CREDENTIALS, null, 2));
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(DEMO_CREDENTIALS),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          logConsole("err", `← login ${res.status}`, JSON.stringify(data, null, 2));
+          return;
+        }
+        state.jwt = data.token;
+        $("jwtDisplay").textContent = data.token.slice(0, 48) + "…";
+        $("jwtDisplay").title = data.token;
+        syncSessionUi();
+        if (state.petId) updateOwnerPetStatus({ id: state.petId, name: state.petName, isLost: state.petIsLost });
+        logConsole("res", "← login OK", `Usuario: ${data.user.name}\nJWT obtenido.`);
+      } catch (err) {
+        logConsole("err", "← login red", String(err.message || err));
+      }
+    }
+
+    async function sendMessage(e) {
+      e.preventDefault();
+      if (!state.sessionId) return;
+
+      const text = $("msgText").value.trim();
+      const locationReference = $("msgLocation").value.trim();
+      const imageFile = $("msgImage").files?.[0] ?? null;
+
+      if (!text && !locationReference && !imageFile) {
+        logConsole("err", "Validación local", "Incluí mensaje, referencia («Lo vi en…») o una foto.");
+        return;
+      }
+
+      const formData = new FormData();
+      if (text) formData.append("text", text);
+      if (locationReference) formData.append("locationReference", locationReference);
+      if (imageFile) formData.append("image", imageFile);
+
+      const url = `${apiBase()}/api/chat/sessions/${state.sessionId}/messages`;
+      const parts = [];
+      if (text) parts.push(`texto: "${text.slice(0, 40)}${text.length > 40 ? "…" : ""}"`);
+      if (locationReference) parts.push(`ref: "${locationReference}"`);
+      if (imageFile) parts.push(`imagen: ${imageFile.name}`);
+      logConsole("req", `POST ${url}`, `FormData → ${parts.join(" | ")}`);
+
+      $("btnSend").disabled = true;
+      $("btnSend").textContent = "Enviando…";
+
+      try {
+        const res = await fetch(url, { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (!res.ok) {
+          logConsole("err", `← ${res.status}`, JSON.stringify(data, null, 2));
+          return;
+        }
+
+        logConsole("res", "← 201 mensaje + imagen guardados", JSON.stringify(data, null, 2));
+
+        showPushNotification({
+          petName: state.petName,
+          ownerName: state.ownerName,
+          sessionId: state.sessionId,
+          text: text || null,
+          locationReference: locationReference || null,
+          imageUrl: data.data?.imageUrl || null,
+        });
+
+        $("msgText").value = "";
+        $("msgLocation").value = "";
+        $("msgImage").value = "";
+        $("imagePreview").classList.add("hidden");
+        $("imagePreview").src = "";
+        $("imagePreviewLabel").textContent = "Sin imagen seleccionada";
+
+        await pollMessages(false);
+      } catch (err) {
+        logConsole("err", "← red", String(err.message || err));
+      } finally {
+        $("btnSend").disabled = false;
+        $("btnSend").textContent = "Enviar al dueño";
+      }
+    }
+
+    async function sendReply(e) {
+      e.preventDefault();
+      if (!state.sessionId || !state.jwt) return;
+      const text = $("replyText").value.trim();
+      if (!text) return;
+
+      const url = `${apiBase()}/api/chat/sessions/${state.sessionId}/reply`;
+      logConsole("req", `POST ${url}`, JSON.stringify({ text }, null, 2));
+      $("btnReply").disabled = true;
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${state.jwt}` },
+          body: JSON.stringify({ text }),
+        });
+        const data = await res.json();
+        if (!res.ok) { logConsole("err", `← reply ${res.status}`, JSON.stringify(data, null, 2)); return; }
+        logConsole("res", "← 201 respuesta dueño", JSON.stringify(data, null, 2));
+        $("replyText").value = "";
+        await pollMessages(false);
+      } catch (err) {
+        logConsole("err", "← red", String(err.message || err));
+      } finally {
+        $("btnReply").disabled = !state.jwt;
+      }
+    }
+
+    $("messageForm").addEventListener("submit", sendMessage);
+    $("msgImage").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        $("imagePreviewLabel").textContent = "Sin imagen seleccionada";
+        $("imagePreview").classList.add("hidden");
+        $("imagePreview").src = "";
+        return;
+      }
+      $("imagePreviewLabel").textContent = file.name;
+      $("imagePreview").src = URL.createObjectURL(file);
+      $("imagePreview").classList.remove("hidden");
+    });
+    $("replyForm").addEventListener("submit", sendReply);
+    $("btnLogin").addEventListener("click", ownerLogin);
+    $("btnToggleLost").addEventListener("click", toggleLostAlert);
+    $("btnReload").addEventListener("click", loadQrSession);
+    $("btnCapturarGps").addEventListener("click", capturarUbicacionVecino);
+    $("btnClearConsole").addEventListener("click", () => { $("console").innerHTML = ""; });
+    $("qrTokenLabel").textContent = DEMO_QR_TOKEN;
+
+    logConsole("info", "Honey-app", "Fases 2+3 · Smart Tech + chat multimedia\nTip: Login JWT → Activar Modo Alerta para ver el panel global.");
+    loadQrSession();
+    startAlertsPolling();
+  </script>
+</body>
+</html>

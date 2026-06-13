@@ -1,0 +1,18 @@
+# OPCIONAL — Solo si tenés Docker instalado.
+# Sin Docker, usá Neon/Supabase o Postgres local (ver backend/.env.example).
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: honey-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: honey
+      POSTGRES_PASSWORD: honey_secret
+      POSTGRES_DB: honey_app
+    ports:
+      - "5432:5432"
+    volumes:
+      - honey_pg_data:/var/lib/postgresql/data
+
+volumes:
+  honey_pg_data:

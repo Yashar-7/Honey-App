@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": "./backend",
+    "rootDir": "./backend/src"
+  },
+  "include": ["backend/src/**/*.ts"],
+  "exclude": ["backend/node_modules", "backend/dist"]
+}
