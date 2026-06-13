@@ -1,18 +1,9 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd backend && npm install",
-  "buildCommand": "cd backend && npm run vercel-build",
-  "functions": {
-    "backend/api/index.ts": {
-      "memory": 1024,
-      "maxDuration": 30,
-      "includeFiles": "backend/dist/**,backend/public/**,backend/prisma/schema.prisma,backend/node_modules/.prisma/**,backend/node_modules/@prisma/client/**"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/backend/api"
-    }
-  ]
-}
+    "$schema": "https://openapi.vercel.sh/vercel.json",
+    "rewrites": [
+      {
+        "source": "/(.*)",
+        "destination": "/api/index.ts"
+      }
+    ]
+  }
