@@ -6,7 +6,7 @@
  *   node test-suite.js
  *   BASE_URL=http://localhost:3000 QR_TOKEN=demo-qr-token-abc123 node test-suite.js
  *
- * Requisito: backend corriendo (`cd backend && npm run dev`)
+ * Requisito: servidor corriendo (`npm run dev` desde la raíz del proyecto)
  */
 
 const BASE_URL = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");

@@ -32,13 +32,16 @@ temp/
 *.swo
 
 # --- Uploads en runtime (chat local) ---
-backend/public/uploads/*
-!backend/public/uploads/.gitkeep
+public/uploads/*
+!public/uploads/.gitkeep
 
 # --- IDE / editor ---
 .vscode/
 .idea/
 *.code-workspace
+
+# --- Legacy (junction backend/src → src; no commitear duplicados) ---
+backend/src
 
 # --- Vercel / deploy local ---
 .vercel/

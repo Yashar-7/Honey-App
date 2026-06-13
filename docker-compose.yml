@@ -1,5 +1,5 @@
 # OPCIONAL — Solo si tenés Docker instalado.
-# Sin Docker, usá Neon/Supabase o Postgres local (ver backend/.env.example).
+# Sin Docker, usá Neon/Supabase o Postgres local (ver .env.example).
 services:
   postgres:
     image: postgres:16-alpine
