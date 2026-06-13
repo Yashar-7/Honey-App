@@ -1,13 +1,12 @@
 import "dotenv/config";
 import app from "./app";
 
-// Solo ejecutamos app.listen si NO estamos en Vercel
-if (process.env.NODE_ENV !== 'production') {
-  const PORT = Number(process.env.PORT) || 3000;
-  app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
-  });
-}
+const PORT = Number(process.env.PORT) || 3000;
 
-// Exportamos la app para Vercel
-export default app;
+app.listen(PORT, () => {
+  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+  console.log(`Vista móvil (vecino): http://localhost:${PORT}/`);
+  console.log(`Registro dueño: http://localhost:${PORT}/registro.html`);
+  console.log(`Alta cuenta: http://localhost:${PORT}/cuenta.html`);
+  console.log(`War Room dueño: http://localhost:${PORT}/dashboard.html`);
+});

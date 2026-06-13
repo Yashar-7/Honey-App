@@ -1,4 +1,4 @@
 import "dotenv/config";
-import app from "../src/app"; // Apunta directamente al código fuente
+import app from "../dist/app";
 
 export default app;
