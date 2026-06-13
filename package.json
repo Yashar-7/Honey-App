@@ -1,0 +1,8 @@
+{
+  "name": "honey-app",
+  "private": true,
+  "scripts": {
+    "build": "npm run vercel-build --prefix backend",
+    "vercel-build": "npm run vercel-build --prefix backend"
+  }
+}
