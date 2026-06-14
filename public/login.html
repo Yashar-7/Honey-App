@@ -45,6 +45,7 @@
         </footer>
     </div>
 
+    <script src="/js/owner-auth.js"></script>
     <script>
         const STORAGE_KEY = "honey_owner_jwt";
         const EMAIL_KEY = "honey_owner_email";
@@ -58,9 +59,7 @@
             el.classList.remove("hidden");
         }
 
-        if (sessionStorage.getItem(STORAGE_KEY)) {
-            window.location.replace("/registro");
-        }
+        redirectOwnerIfAuthenticated();
 
         $("form-login").addEventListener("submit", async (e) => {
             e.preventDefault();
@@ -82,7 +81,9 @@
                 sessionStorage.setItem(STORAGE_KEY, data.token);
                 sessionStorage.setItem(EMAIL_KEY, $("login-email").value.trim());
                 if (data.user?.name) sessionStorage.setItem(NAME_KEY, data.user.name);
-                window.location.href = "/registro";
+
+                const dest = await resolveOwnerDestination(data.token);
+                window.location.href = dest;
             } catch (err) {
                 showBanner(err.message || "No se pudo iniciar sesión", "error");
             } finally {

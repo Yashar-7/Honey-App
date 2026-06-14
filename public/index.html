@@ -96,26 +96,35 @@
             <p id="chat-pet-label" class="chat-pet-label"></p>
         </header>
 
-        <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div>
-
-        <div id="chat-empty-hint" class="chat-empty-hint hidden">
-            Escribí un mensaje para avisarle al dueño de forma anónima.
+        <div class="chat-body">
+            <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div>
+            <div id="chat-empty-hint" class="chat-empty-hint hidden">
+                Escribí un mensaje para avisarle al dueño de forma anónima.
+            </div>
         </div>
 
-        <div class="chat-toolbar">
-            <button type="button" id="btn-gps" title="Compartir ubicación" class="btn-icon" aria-label="Compartir GPS">📍</button>
-            <label class="btn-icon" aria-label="Adjuntar foto">
-                📷
-                <input id="input-photo" type="file" accept="image/*" capture="environment" class="hidden">
-            </label>
-            <img id="photo-preview-thumb" class="photo-preview hidden" alt="">
-        </div>
+        <div class="chat-composer" role="region" aria-label="Escribir mensaje">
+            <div class="chat-toolbar">
+                <button type="button" id="btn-gps" title="Compartir ubicación" class="btn-icon" aria-label="Compartir GPS">📍</button>
+                <label class="btn-icon" aria-label="Adjuntar foto">
+                    📷
+                    <input id="input-photo" type="file" accept="image/*" capture="environment" class="hidden">
+                </label>
+                <img id="photo-preview-thumb" class="photo-preview hidden" alt="">
+            </div>
 
-        <form id="chat-form" class="chat-form">
-            <input id="chat-input" type="text" maxlength="500" autocomplete="off" enterkeyhint="send"
-                placeholder="Escribí tu mensaje…" class="chat-input">
-            <button type="submit" id="btn-send-chat" class="btn-send">Enviar</button>
-        </form>
+            <form id="chat-form" class="chat-form">
+                <label for="chat-input" class="sr-only">Mensaje para el dueño</label>
+                <input id="chat-input" type="text" maxlength="500" autocomplete="off" enterkeyhint="send"
+                    placeholder="Escribí tu mensaje…" class="chat-input">
+                <button type="submit" id="btn-send-chat" class="btn-send" aria-label="Enviar mensaje">
+                    <svg class="btn-send__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/>
+                        <path d="m21.854 2.147-10.94 10.939"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
     </section>
 
     <div id="scan-overlay" class="scan-overlay hidden" role="status" aria-live="polite" aria-busy="false">
@@ -468,7 +477,19 @@
             showChatView(skipAnimation);
             startPolling();
             pollMessages();
-            setTimeout(() => $("chat-input").focus(), 400);
+            setTimeout(() => {
+                $("chat-input")?.focus({ preventScroll: true });
+                $("chat-messages")?.scrollTo({ top: $("chat-messages").scrollHeight });
+            }, 400);
+        }
+
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener("resize", () => {
+                if (!state.chatActive) return;
+                const panel = $("panel-chat");
+                if (!panel || panel.classList.contains("hidden")) return;
+                panel.style.setProperty("--keyboard-offset", `${Math.max(0, window.innerHeight - window.visualViewport.height)}px`);
+            });
         }
 
         function closeChatUI() {

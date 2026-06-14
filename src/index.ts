@@ -33,13 +33,19 @@ app.get("/login", (_req, res) => {
   res.redirect("/login.html");
 });
 
-app.get("/registro", (_req, res) => {
+app.get("/dashboard", (_req, res) => {
+  res.redirect("/dashboard.html");
+});
+
+app.get("/registro", (req, res) => {
   const v2Index = path.join(publicDir, "registro-v2", "index.html");
+  const queryStart = req.url.indexOf("?");
+  const query = queryStart >= 0 ? req.url.slice(queryStart) : "";
   if (existsSync(v2Index)) {
-    res.redirect("/registro-v2/");
+    res.redirect(query ? `/registro-v2/${query}` : "/registro-v2/");
     return;
   }
-  res.redirect("/registro.html");
+  res.redirect(`/registro.html${query}`);
 });
 
 /** Vercel puede entregar rutas /api sin el prefijo; restauramos el path esperado por Express. */
