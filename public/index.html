@@ -103,7 +103,7 @@
             </div>
         </div>
 
-        <div class="chat-composer" role="region" aria-label="Escribir mensaje">
+        <div class="chat-input-wrapper" role="region" aria-label="Escribir mensaje">
             <div class="chat-toolbar">
                 <button type="button" id="btn-gps" title="Compartir ubicación" class="btn-icon" aria-label="Compartir GPS">📍</button>
                 <label class="btn-icon" aria-label="Adjuntar foto">
@@ -366,7 +366,7 @@
             }).join("");
 
             requestAnimationFrame(() => {
-                box.scrollTop = box.scrollHeight;
+                scrollChatToBottom();
             });
         }
 
@@ -479,17 +479,13 @@
             pollMessages();
             setTimeout(() => {
                 $("chat-input")?.focus({ preventScroll: true });
-                $("chat-messages")?.scrollTo({ top: $("chat-messages").scrollHeight });
+                scrollChatToBottom();
             }, 400);
         }
 
-        if (window.visualViewport) {
-            window.visualViewport.addEventListener("resize", () => {
-                if (!state.chatActive) return;
-                const panel = $("panel-chat");
-                if (!panel || panel.classList.contains("hidden")) return;
-                panel.style.setProperty("--keyboard-offset", `${Math.max(0, window.innerHeight - window.visualViewport.height)}px`);
-            });
+        function scrollChatToBottom() {
+            const body = document.querySelector(".chat-body");
+            if (body) body.scrollTop = body.scrollHeight;
         }
 
         function closeChatUI() {

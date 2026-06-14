@@ -488,23 +488,30 @@ body {
   color: var(--text-muted);
 }
 
-/* Chat fullscreen */
+/* Chat fullscreen — layout móvil estricto (100dvh + input anclado) */
 .panel-chat {
   position: fixed;
   inset: 0;
   z-index: 50;
   display: flex;
   flex-direction: column;
+  width: 100%;
   max-width: var(--max-width);
+  height: 100dvh;
+  min-height: -webkit-fill-available;
   margin: 0 auto;
   left: 0;
   right: 0;
-  background: var(--bg);
-  height: 100dvh;
-  height: 100vh;
   overflow: hidden;
+  background: var(--bg);
   transform: translateY(100%);
   transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@supports (height: 100dvh) {
+  .panel-chat {
+    height: 100dvh;
+  }
 }
 
 .panel-chat.is-open {
@@ -589,49 +596,44 @@ body {
 .chat-body {
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 .chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  padding: 1rem 1rem 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  padding: 1rem 1rem 0.5rem;
+  min-height: min-content;
 }
 
 .chat-empty-hint {
-  flex-shrink: 0;
-  padding: 0 1rem 0.75rem;
+  width: 100%;
+  padding: 0 1rem 1rem;
   text-align: center;
   font-size: 0.75rem;
   color: var(--text-muted);
 }
 
-.chat-composer {
+.chat-input-wrapper {
   flex-shrink: 0;
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
-  background: linear-gradient(180deg, rgba(0, 31, 63, 0) 0%, var(--bg) 18%);
-  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-  margin-bottom: var(--keyboard-offset, 0px);
-  box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.35);
-  border-top: 1px solid rgba(255, 215, 0, 0.15);
+  width: 100%;
+  background: #0a1628;
+  padding: 1rem;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  border-top: 1px solid rgba(255, 215, 0, 0.18);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.35);
 }
 
 .chat-toolbar {
-  flex-shrink: 0;
   display: flex;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem 0.25rem;
-  background: transparent;
+  margin-bottom: 0.75rem;
 }
 
 .btn-icon {
@@ -668,18 +670,17 @@ body {
 }
 
 .chat-form {
-  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem 0;
-  background: transparent;
+  gap: 0.75rem;
+  width: 100%;
 }
 
 .chat-input {
   flex: 1;
-  min-height: 3rem;
+  width: 100%;
   min-width: 0;
+  min-height: 3rem;
   padding: 0.75rem 1rem;
   border: 2px solid rgba(255, 215, 0, 0.28);
   border-radius: 999px;
