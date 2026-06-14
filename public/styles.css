@@ -755,6 +755,50 @@ body {
   text-align: right;
 }
 
+/* Observaciones de salud — ficha vecino */
+.health-observations {
+  padding: 1.25rem;
+  background: rgba(255, 183, 0, 0.06);
+  border: 2px solid rgba(255, 183, 0, 0.55);
+  border-radius: var(--radius);
+  box-shadow: 0 0 24px rgba(255, 183, 0, 0.12);
+}
+
+.health-observations__head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.health-observations__icon {
+  flex-shrink: 0;
+  color: var(--action);
+}
+
+.health-observations__title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: var(--action);
+  letter-spacing: 0.02em;
+}
+
+.health-observations__body {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.health-observations__hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.6875rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
 /* Portal del dueño */
 .owner-portal-link {
   display: block;

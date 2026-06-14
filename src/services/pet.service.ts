@@ -214,3 +214,39 @@ export async function togglePetLostAlert(petId: string, userId: string) {
     pet: updatedPet,
   };
 }
+
+/** Observaciones de salud unificadas (medicación, alergias, cuidados). */
+export async function updatePetHealthObservations(
+  petId: string,
+  userId: string,
+  healthObservations: string,
+) {
+  const pet = await prisma.pet.findFirst({
+    where: { id: petId, userId },
+    select: { id: true, name: true },
+  });
+
+  if (!pet) {
+    throw new AppError(404, "Mascota no encontrada");
+  }
+
+  const trimmed = healthObservations.trim();
+
+  const updated = await prisma.pet.update({
+    where: { id: pet.id },
+    data: { characteristics: trimmed || null },
+    select: {
+      id: true,
+      name: true,
+      characteristics: true,
+      updatedAt: true,
+    },
+  });
+
+  return {
+    message: trimmed
+      ? "Observaciones de salud guardadas"
+      : "Observaciones de salud eliminadas",
+    pet: updated,
+  };
+}

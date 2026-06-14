@@ -9,8 +9,8 @@ import {
   buildUniqueImageFileName,
   uploadPetPhoto,
 } from "../middleware/upload.middleware";
-import { createPetSchema } from "../schemas/pet.schema";
-import { createPet, rotatePetQrToken } from "../services/pet.service";
+import { createPetSchema, updateHealthObservationsSchema } from "../schemas/pet.schema";
+import { createPet, rotatePetQrToken, updatePetHealthObservations } from "../services/pet.service";
 import { AuthenticatedRequest } from "../types/express";
 
 export const petsRouter = Router();
@@ -70,6 +70,26 @@ petsRouter.post(
     }
   },
 );
+
+/**
+ * PATCH /api/pets/:id/health
+ * Actualiza observaciones de salud (visible al escanear QR si se pierde).
+ */
+petsRouter.patch("/:id/health", requireAuth, async (req, res, next) => {
+  try {
+    const { userId } = req as AuthenticatedRequest;
+    const petId = String(req.params.id);
+    const { healthObservations } = updateHealthObservationsSchema.parse(req.body);
+    const result = await updatePetHealthObservations(
+      petId,
+      userId,
+      healthObservations,
+    );
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * POST /api/pets/:id/rotate-qr

@@ -60,10 +60,16 @@
                     </div>
                 </div>
 
-                <section id="section-medical" class="card card__body fade-up fade-up-delay-1">
-                    <h3 class="section-title"><span aria-hidden="true">🩺</span> Ficha Médica Avanzada</h3>
-                    <div id="medical-grid" class="medical-grid"></div>
-                    <p id="medical-empty" class="medical-empty hidden">El dueño no cargó datos médicos adicionales.</p>
+                <section id="section-health" class="health-observations hidden fade-up fade-up-delay-1" aria-labelledby="health-observations-title">
+                    <div class="health-observations__head">
+                        <svg class="health-observations__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                            <path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>
+                        </svg>
+                        <h3 id="health-observations-title" class="health-observations__title">Observaciones de Salud</h3>
+                    </div>
+                    <p id="health-observations-text" class="health-observations__body"></p>
+                    <p class="health-observations__hint">Info médica compartida solo para cuidar mejor a esta mascota.</p>
                 </section>
             </div>
 
@@ -265,33 +271,37 @@
             return messages.map((m) => `${m.id}:${m.createdAt}`).join("|");
         }
 
-        function renderMedicalField(label, icon, value) {
-            const text = (value ?? "").trim();
-            if (!text) return "";
-            return `<div class="medical-row">
-                <p class="medical-row__label">${icon} ${escapeHtml(label)}</p>
-                <p class="medical-row__value">${escapeHtml(text)}</p>
-            </div>`;
+        function buildHealthObservationsText(pet) {
+            const chunks = [
+                pet.characteristics,
+                pet.medicalConditions,
+                pet.medications ? `Medicación: ${pet.medications}` : "",
+                pet.allergies ? `Alergias: ${pet.allergies}` : "",
+                pet.behavioralNotes ? `Comportamiento: ${pet.behavioralNotes}` : "",
+                pet.distinguishingMarks ? `Señas: ${pet.distinguishingMarks}` : "",
+            ]
+                .map((part) => (part ?? "").trim())
+                .filter(Boolean);
+            return chunks.join("\n\n");
+        }
+
+        function renderHealthObservations(pet) {
+            const section = $("section-health");
+            const textEl = $("health-observations-text");
+            const content = buildHealthObservationsText(pet);
+
+            if (!content) {
+                section.classList.add("hidden");
+                textEl.textContent = "";
+                return;
+            }
+
+            textEl.textContent = content;
+            section.classList.remove("hidden");
         }
 
         function renderMedicalRecord(pet) {
-            const rows = [
-                renderMedicalField("Señas particulares", "🔍", pet.distinguishingMarks),
-                renderMedicalField("Condición Médica", "🫀", pet.medicalConditions),
-                renderMedicalField("Medicación", "💊", pet.medications),
-                renderMedicalField("Alergias", "⚠️", pet.allergies),
-                renderMedicalField("Notas de Comportamiento", "🐾", pet.behavioralNotes),
-            ].filter(Boolean);
-
-            const grid = $("medical-grid");
-            const empty = $("medical-empty");
-            if (rows.length === 0) {
-                grid.innerHTML = "";
-                empty.classList.remove("hidden");
-            } else {
-                empty.classList.add("hidden");
-                grid.innerHTML = rows.join("");
-            }
+            renderHealthObservations(pet);
         }
 
         function renderPetProfile(pet) {

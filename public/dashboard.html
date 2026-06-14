@@ -167,6 +167,25 @@
                 </div>
             </div>
 
+            <div id="pet-health-panel" class="hidden mx-4 lg:mx-6 mt-3 card-honey p-4 border-2 border-[#FFB700]/40 rounded-2xl">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-lg" aria-hidden="true">💓</span>
+                    <h3 class="text-sm font-extrabold text-[#FFB700]">Observaciones de salud</h3>
+                </div>
+                <p class="text-[11px] text-slate-400 leading-relaxed mb-3" title="Privacidad Honey App">
+                    Esta información solo será visible si la mascota se pierde, para ayudar a quien la encuentre a cuidarla mejor.
+                </p>
+                <label for="health-observations-input" class="sr-only">Observaciones de salud</label>
+                <textarea id="health-observations-input" rows="4" maxlength="1000"
+                    placeholder="Medicación, alergias, cuidados especiales…"
+                    class="w-full min-h-[120px] bg-[#0A1628] border border-[#FFB700]/30 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-[#FFB700] focus:ring-2 focus:ring-[#FFB700]/20 resize-y"></textarea>
+                <p id="health-save-status" class="hidden mt-2 text-xs font-semibold text-emerald-400"></p>
+                <button type="button" id="btn-save-health"
+                    class="mt-3 w-full min-h-[48px] rounded-full font-bold text-sm bg-gradient-to-r from-[#FFB700] to-[#FFA500] text-[#0A1628] hover:brightness-105 transition">
+                    Guardar observaciones
+                </button>
+            </div>
+
             <div class="war-room-grid flex-1 p-4 lg:p-6 grid grid-cols-1 xl:grid-cols-3 gap-4 min-h-0">
                 <section class="map-section xl:col-span-2 flex flex-col w-full">
                     <div class="flex items-center justify-between mb-2 px-0.5 gap-2 flex-wrap">
@@ -981,6 +1000,47 @@
             $("qr-modal-image").src = "";
         }
 
+        function updateHealthPanel() {
+            const pet = getSelectedPet();
+            const panel = $("pet-health-panel");
+            if (!pet || !panel) {
+                panel?.classList.add("hidden");
+                return;
+            }
+            panel.classList.remove("hidden");
+            $("health-observations-input").value = pet.characteristics?.trim() || "";
+            $("health-save-status").classList.add("hidden");
+        }
+
+        async function saveHealthObservations() {
+            const pet = getSelectedPet();
+            if (!pet) return;
+            const btn = $("btn-save-health");
+            const status = $("health-save-status");
+            btn.disabled = true;
+            status.classList.add("hidden");
+
+            try {
+                const res = await api(`/api/pets/${pet.id}/health`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        healthObservations: $("health-observations-input").value.trim(),
+                    }),
+                });
+                const idx = state.pets.findIndex((p) => p.id === pet.id);
+                if (idx >= 0) {
+                    state.pets[idx] = { ...state.pets[idx], characteristics: res.pet?.characteristics ?? "" };
+                }
+                status.textContent = "Observaciones guardadas ✅";
+                status.classList.remove("hidden");
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         function updateEmergencyUI() {
             const pet = getSelectedPet();
             const lost = Boolean(pet?.isLost);
@@ -1002,9 +1062,11 @@
 
             if (lost && pet) {
                 $("safety-pet-name").textContent = pet.name;
-                $("safety-medical").textContent = pet.characteristics?.trim() || "Sin condiciones médicas cargadas — actualizalas en el registro.";
+                $("safety-medical").textContent = pet.characteristics?.trim() || "Sin observaciones de salud cargadas — completalas abajo.";
                 $("safety-behavior").textContent = pet.finderMessage?.trim() || "Sin mensaje de comportamiento.";
             }
+
+            updateHealthPanel();
 
             if (lost) {
                 invalidateCommunityWall();
@@ -1201,6 +1263,7 @@
         });
 
         $("btn-emergency").addEventListener("click", toggleEmergency);
+        $("btn-save-health")?.addEventListener("click", saveHealthObservations);
 
         $("btn-view-qr")?.addEventListener("click", () => {
             const pet = getSelectedPet();

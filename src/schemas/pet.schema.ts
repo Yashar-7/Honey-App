@@ -37,4 +37,16 @@ export const createPetSchema = z.object({
     .max(500),
 });
 
+export const updateHealthObservationsSchema = z.object({
+  healthObservations: z
+    .string()
+    .trim()
+    .max(1000, "Máximo 1000 caracteres")
+    .optional()
+    .transform((v) => v ?? ""),
+});
+
 export type CreatePetInput = z.infer<typeof createPetSchema>;
+export type UpdateHealthObservationsInput = z.infer<
+  typeof updateHealthObservationsSchema
+>;

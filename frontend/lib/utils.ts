@@ -38,5 +38,5 @@ export type RegisterPetResponse = {
   scanUrl?: string;
   qrSvgUrl?: string;
   qrSvgDownloadUrl?: string;
-  pet?: { name?: string };
+  pet?: { id?: string; name?: string };
 };

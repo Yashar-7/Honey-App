@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Camera,
   CheckCircle2,
+  HeartPulse,
   PawPrint,
   QrCode,
   ShieldCheck,
@@ -76,6 +77,11 @@ export function PetRegisterV2({
   const [result, setResult] = useState<RegisterPetResponse | null>(null);
   const [qrPngUrl, setQrPngUrl] = useState<string | null>(null);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const [showHealthForm, setShowHealthForm] = useState(false);
+  const [healthObservations, setHealthObservations] = useState("");
+  const [healthSaving, setHealthSaving] = useState(false);
+  const [healthSaved, setHealthSaved] = useState(false);
+  const [healthError, setHealthError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoPreviewRef = useRef<string | null>(null);
@@ -227,6 +233,37 @@ export function PetRegisterV2({
     triggerHaptic(30);
   };
 
+  const saveHealthObservations = async () => {
+    const petId = result?.pet?.id;
+    if (!petId) return;
+
+    setHealthSaving(true);
+    setHealthError(null);
+
+    try {
+      const res = await fetch(`/api/pets/${encodeURIComponent(petId)}/health`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ healthObservations }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `Error ${res.status}`);
+      }
+      setHealthSaved(true);
+      triggerHaptic([30, 50, 30]);
+    } catch (err) {
+      setHealthError(
+        err instanceof Error ? err.message : "No se pudieron guardar los datos",
+      );
+    } finally {
+      setHealthSaving(false);
+    }
+  };
+
   const resetFlow = () => {
     setName("");
     setNameTouched(false);
@@ -242,6 +279,10 @@ export function PetRegisterV2({
     setResult(null);
     setQrPngUrl(null);
     setError(null);
+    setShowHealthForm(false);
+    setHealthObservations("");
+    setHealthSaved(false);
+    setHealthError(null);
     goToStep(1, -1);
   };
 
@@ -675,6 +716,71 @@ export function PetRegisterV2({
               <p className="text-xs leading-relaxed text-white/55">
                 Tip Burro: Imprimí el QR y pegalo en su collar. Gratis.
               </p>
+
+              {!showHealthForm ? (
+                <button
+                  type="button"
+                  onClick={() => setShowHealthForm(true)}
+                  className="mx-auto flex items-center justify-center gap-2 text-sm font-semibold text-mustard/90 underline-offset-2 hover:text-mustard hover:underline"
+                >
+                  <HeartPulse className="h-4 w-4" aria-hidden />
+                  Completar perfil de salud (opcional)
+                </button>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-2 rounded-2xl border border-mustard/30 bg-night/50 p-4 text-left"
+                >
+                  <div className="mb-3 flex items-center gap-2">
+                    <HeartPulse className="h-5 w-5 shrink-0 text-mustard" aria-hidden />
+                    <h3 className="text-sm font-extrabold text-mustard">
+                      Observaciones de salud
+                    </h3>
+                  </div>
+                  <p
+                    className="mb-3 text-xs leading-relaxed text-white/55"
+                    title="Privacidad Honey App"
+                  >
+                    Esta información solo será visible si la mascota se pierde,
+                    para ayudar a quien la encuentre a cuidarla mejor.
+                  </p>
+                  <label htmlFor="health-observations" className="sr-only">
+                    Observaciones de salud de {name.trim()}
+                  </label>
+                  <textarea
+                    id="health-observations"
+                    value={healthObservations}
+                    onChange={(e) => {
+                      setHealthObservations(e.target.value);
+                      setHealthSaved(false);
+                    }}
+                    maxLength={1000}
+                    rows={4}
+                    placeholder="Ej: Toma medicación cada 12 hs · Alérgico al pollo · Asustadizo con ruidos fuertes"
+                    className="min-h-[120px] w-full resize-y rounded-xl border border-mustard/25 bg-[#0A1628] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                  />
+                  {healthError && (
+                    <p className="mt-2 text-xs text-red-300" role="alert">
+                      {healthError}
+                    </p>
+                  )}
+                  {healthSaved && (
+                    <p className="mt-2 text-xs font-semibold text-emerald-400">
+                      Guardado · {name.trim()} está aún más protegida ✅
+                    </p>
+                  )}
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="mt-3 w-full"
+                    disabled={healthSaving}
+                    onClick={saveHealthObservations}
+                  >
+                    {healthSaving ? "Guardando…" : "Guardar observaciones"}
+                  </Button>
+                </motion.div>
+              )}
 
               <a
                 href="/dashboard.html"
