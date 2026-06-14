@@ -1,874 +1,235 @@
 <!DOCTYPE html>
-
 <html lang="es">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Honey App — Registrar mascota</title>
-
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/honey-theme.css">
-
+    <link rel="stylesheet" href="styles.css">
 </head>
-
-<body class="bg-[#0f172a] text-slate-300 honey-app min-h-screen font-sans antialiased">
-
-    <div class="max-w-lg mx-auto px-4 py-8">
-
-        <header class="text-center mb-8">
-
-            <h1 class="text-2xl font-bold text-[#d97706] flex justify-center items-center gap-2">
-
-                🐾 Honey App
-
-            </h1>
-
-            <p class="text-sm text-slate-500 mt-2">Registro amigable · Chapita QR para tu mejor amigo</p>
-
+<body>
+    <div class="portal-shell">
+        <header class="portal-header">
+            <img src="/assets/logo.svg" alt="Honey App" class="logo" width="200" height="45" decoding="async">
+            <span class="portal-badge">Portal del dueño</span>
+            <h1 class="portal-title">Registrar mascota</h1>
+            <p class="portal-subtitle">Completá la ficha y generá la chapita QR para imprimir</p>
         </header>
 
+        <div id="statusBanner" class="status-banner hidden"></div>
 
-
-        <div id="statusBanner" class="hidden mb-4 rounded-xl px-4 py-3 text-sm font-medium border"></div>
-
-
-
-        <!-- Login -->
-
-        <section id="panel-login" class="bg-[#1e293b] rounded-2xl p-6 shadow-md border border-slate-700 mb-6">
-
-            <h2 class="text-lg font-semibold mb-1 text-[#f8fafc]">Iniciá sesión</h2>
-
-            <p class="text-xs text-slate-500 mb-4">Necesitás tu cuenta para registrar una mascota.</p>
-
-            <form id="form-login" class="space-y-4">
-
+        <section id="panel-register" class="card portal-card card__body hidden">
+            <div class="portal-card__head">
                 <div>
-
-                    <label for="login-email" class="text-xs font-medium text-slate-500 block mb-1">Email</label>
-
-                    <input id="login-email" type="email" required autocomplete="email"
-
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
-
-                        placeholder="dueno@ejemplo.com" value="dueno@ejemplo.com">
-
+                    <h2>Nueva mascota</h2>
+                    <p id="owner-label"></p>
                 </div>
-
-                <div>
-
-                    <label for="login-password" class="text-xs font-medium text-slate-500 block mb-1">Contraseña</label>
-
-                    <input id="login-password" type="password" required autocomplete="current-password"
-
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
-
-                        placeholder="••••••••" value="demo1234">
-
-                </div>
-
-                <button type="submit" id="btn-login"
-
-                    class="w-full bg-[#d97706] hover:bg-[#b45309] text-[#f8fafc] font-bold py-3 rounded-xl transition">
-
-                    Entrar
-
-                </button>
-
-            </form>
-
-            <p class="text-center text-sm text-slate-500 mt-5 pt-4 border-t border-slate-700">
-
-                ¿No tenés cuenta?
-
-                <a href="/cuenta.html" class="text-amber-500 hover:text-amber-400 font-medium underline ml-1">
-
-                    Registrate aquí
-
-                </a>
-
-            </p>
-
-        </section>
-
-
-
-        <!-- Registro mascota -->
-
-        <section id="panel-register" class="hidden bg-[#1e293b] rounded-2xl p-6 shadow-md border border-slate-700">
-
-            <div class="flex items-center justify-between mb-5">
-
-                <div>
-
-                    <h2 class="text-lg font-semibold text-[#f8fafc]">Nueva mascota</h2>
-
-                    <p id="owner-label" class="text-xs text-slate-500 mt-0.5"></p>
-
-                </div>
-
-                <button type="button" id="btn-logout"
-
-                    class="text-xs text-slate-500 hover:text-amber-500 underline">
-
-                    Salir
-
-                </button>
-
+                <button type="button" id="btn-logout" class="btn-link">Salir</button>
             </div>
 
-
-
-            <form id="form-pet" class="space-y-4" enctype="multipart/form-data">
-
-                <div>
-
-                    <label for="pet-name" class="text-xs font-medium text-slate-500 block mb-1">Nombre de la mascota</label>
-
-                    <input id="pet-name" name="name" type="text" required maxlength="80"
-
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
-
-                        placeholder="Ej: Luna">
-
+            <form id="form-pet" class="form-stack" enctype="multipart/form-data">
+                <div class="form-field">
+                    <label class="form-label" for="pet-name">Nombre de la mascota</label>
+                    <input id="pet-name" name="name" class="form-input" type="text" required maxlength="80" placeholder="Ej: Luna">
                 </div>
 
-
-
-                <div>
-
-                    <label for="pet-species" class="text-xs font-medium text-slate-500 block mb-1">¿Qué es tu mascota?</label>
-
-                    <select id="pet-species" name="species" required
-
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 appearance-none">
-
-                        <option value="" disabled selected>Elegí una opción</option>
-
-                        <option value="Perro">🐶 Perro</option>
-
-                        <option value="Gato">🐱 Gato</option>
-
-                        <option value="Otro">✨ Otro</option>
-
-                    </select>
-
-                </div>
-
-
-
-                <div>
-
-                    <label for="pet-breed" class="text-xs font-medium text-slate-500 block mb-1">Raza</label>
-
-                    <input id="pet-breed" name="breed" type="text" maxlength="80"
-
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
-
-                        placeholder="Ej: Mestizo, Siamés…">
-
-                </div>
-
-
-
-                <div class="grid grid-cols-2 gap-3">
-
-                    <div>
-
-                        <label for="pet-age-value" class="text-xs font-medium text-slate-500 block mb-1">Edad</label>
-
-                        <input id="pet-age-value" type="number" min="0" max="30" step="1"
-
-                            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
-
-                            placeholder="Ej: 3">
-
-                    </div>
-
-                    <div>
-
-                        <label for="pet-age-unit" class="text-xs font-medium text-slate-500 block mb-1">Unidad</label>
-
-                        <select id="pet-age-unit"
-
-                            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500">
-
-                            <option value="años">Años</option>
-
-                            <option value="meses">Meses</option>
-
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label" for="pet-species">Especie</label>
+                        <select id="pet-species" name="species" class="form-select" required>
+                            <option value="" disabled selected>Elegí</option>
+                            <option value="Perro">Perro</option>
+                            <option value="Gato">Gato</option>
+                            <option value="Otro">Otro</option>
                         </select>
-
                     </div>
-
-                </div>
-
-
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label for="pet-sex" class="text-xs font-medium text-slate-500 block mb-1">Sexo</label>
-                        <select id="pet-sex" name="sex"
-                            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 appearance-none">
-                            <option value="" selected>Opcional</option>
+                    <div class="form-field">
+                        <label class="form-label" for="pet-sex">Sexo</label>
+                        <select id="pet-sex" name="sex" class="form-select">
+                            <option value="">Opcional</option>
                             <option value="Macho">Macho</option>
                             <option value="Hembra">Hembra</option>
                             <option value="Desconocido">Desconocido</option>
                         </select>
                     </div>
-                    <div>
-                        <label for="pet-size" class="text-xs font-medium text-slate-500 block mb-1">Tamaño</label>
-                        <select id="pet-size" name="size"
-                            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 appearance-none">
-                            <option value="" selected>Opcional</option>
-                            <option value="Pequeño">Pequeño</option>
-                            <option value="Mediano">Mediano</option>
-                            <option value="Grande">Grande</option>
-                        </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-field">
+                        <label class="form-label" for="pet-breed">Raza</label>
+                        <input id="pet-breed" name="breed" class="form-input" type="text" maxlength="80" placeholder="Ej: Mestizo">
+                    </div>
+                    <div class="form-field">
+                        <label class="form-label" for="pet-color">Color</label>
+                        <input id="pet-color" name="color" class="form-input" type="text" maxlength="80" placeholder="Ej: Negro y blanco">
                     </div>
                 </div>
 
-                <div>
-                    <label for="pet-color" class="text-xs font-medium text-slate-500 block mb-1">Color principal</label>
-                    <input id="pet-color" name="color" type="text" maxlength="80"
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
-                        placeholder="Ej: Blanco y marrón, atigrado…">
+                <label class="photo-upload" for="pet-photo">
+                    <span id="photo-label" class="photo-upload__label">📷 Tocá para subir una foto (opcional)</span>
+                    <img id="photo-preview" class="photo-preview hidden" alt="Vista previa">
+                    <input id="pet-photo" name="photo" type="file" accept="image/*" class="hidden">
+                </label>
+
+                <div class="form-field">
+                    <label class="form-label" for="pet-finder-message">Mensaje para el vecino</label>
+                    <textarea id="pet-finder-message" name="finderMessage" class="form-textarea" required maxlength="500">¡Hola! Estoy perdido, por favor dale al botón de abajo para avisarle a mi dueño</textarea>
+                    <p class="form-hint form-hint--accent">🔒 Privacidad total: el contacto es solo por chat interno anónimo.</p>
                 </div>
 
-                <div>
-                    <label for="pet-distinguishing-marks" class="text-xs font-medium text-slate-500 block mb-1">Señas particulares</label>
-                    <textarea id="pet-distinguishing-marks" name="distinguishingMarks" rows="2" maxlength="500"
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 resize-none"
-                        placeholder="Ej: Mancha blanca en el pecho, oreja rasgada…"></textarea>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label for="pet-zip-code" class="text-xs font-medium text-slate-500 block mb-1">Código postal</label>
-                        <input id="pet-zip-code" name="zipCode" type="text" maxlength="12" inputmode="numeric"
-                            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
-                            placeholder="Ej: 7600">
-                    </div>
-                    <div>
-                        <label for="pet-neighborhood" class="text-xs font-medium text-slate-500 block mb-1">Barrio</label>
-                        <input id="pet-neighborhood" name="neighborhood" type="text" maxlength="120"
-                            class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500"
-                            placeholder="Ej: Los Andes, Güemes…">
-                    </div>
-                </div>
-                <p class="text-[10px] text-slate-500 -mt-2">📍 CP y barrio ayudan a activar alertas locales en tu zona (Mar del Plata).</p>
-
-
-
-                <div>
-
-                    <label class="text-xs font-medium text-slate-500 block mb-1">Foto de la mascota</label>
-
-                    <label id="label-photo"
-
-                        class="w-full bg-slate-900 border border-dashed border-slate-600 hover:border-amber-500/60 rounded-xl px-4 py-5 flex flex-col items-center justify-center gap-2 cursor-pointer transition">
-
-                        <span id="photo-label" class="text-sm text-slate-500">📷 Tocá para subir una foto</span>
-
-                        <span class="text-[10px] text-slate-500">JPEG, PNG o WebP · máx. 5 MB</span>
-
-                        <input id="pet-photo" name="photo" type="file" accept="image/jpeg,image/png,image/webp,image/gif" class="hidden">
-
-                    </label>
-
-                    <img id="photo-preview" class="hidden mt-3 max-h-40 w-full rounded-xl object-cover border border-slate-600" alt="Vista previa">
-
-                </div>
-
-
-
-                <div class="medical-record rounded-2xl border border-[#d97706]/25 bg-gradient-to-br from-slate-900/80 to-[#1a2744]/60 p-4 sm:p-5 space-y-4 shadow-inner">
-                    <div class="flex items-start gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-[#d97706]/15 border border-[#d97706]/30 flex items-center justify-center text-lg shrink-0" aria-hidden="true">🩺</div>
-                        <div class="min-w-0 flex-1">
-                            <h3 class="text-sm font-bold text-[#f8fafc]">Ficha Médica Avanzada (Opcional)</h3>
-                            <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">Solo visible para vecinos en modo emergencia. Sin teléfonos, WhatsApp ni datos de contacto — la comunicación es 100% anónima por Honey.</p>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label for="medicalConditions" class="text-xs font-medium text-slate-400 block mb-1">Condición Médica</label>
-                        <textarea id="medicalConditions" name="medicalConditions" rows="2" maxlength="500"
-                            class="w-full bg-slate-900/90 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 resize-none placeholder:text-slate-600"
-                            placeholder="Sufre de convulsiones, problemas cardíacos, etc."></textarea>
-                    </div>
-
-                    <div>
-                        <label for="medications" class="text-xs font-medium text-slate-400 block mb-1">Medicación</label>
-                        <textarea id="medications" name="medications" rows="2" maxlength="500"
-                            class="w-full bg-slate-900/90 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 resize-none placeholder:text-slate-600"
-                            placeholder="Toma fenobarbital cada 12hs."></textarea>
-                    </div>
-
-                    <div>
-                        <label for="allergies" class="text-xs font-medium text-slate-400 block mb-1">Alergias</label>
-                        <input id="allergies" name="allergies" type="text" maxlength="300"
-                            class="w-full bg-slate-900/90 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 placeholder:text-slate-600"
-                            placeholder="Alérgico al pollo o medicamentos.">
-                    </div>
-
-                    <div>
-                        <label for="behavioralNotes" class="text-xs font-medium text-slate-400 block mb-1">Notas de Comportamiento</label>
-                        <textarea id="behavioralNotes" name="behavioralNotes" rows="2" maxlength="500"
-                            class="w-full bg-slate-900/90 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/30 resize-none placeholder:text-slate-600"
-                            placeholder="Muy asustadizo con ruidos fuertes."></textarea>
-                    </div>
-                </div>
-
-
-
-                <div>
-
-                    <label for="pet-finder-message" class="text-xs font-medium text-slate-500 block mb-1">Mensaje predeterminado para el vecino</label>
-
-                    <textarea id="pet-finder-message" name="finderMessage" rows="3" required maxlength="500"
-
-                        class="w-full bg-slate-900 border border-slate-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-amber-500 resize-none"
-
-                        placeholder="¡Hola! Estoy perdido, por favor dale al botón de abajo para avisarle a mi dueño">¡Hola! Estoy perdido, por favor dale al botón de abajo para avisarle a mi dueño</textarea>
-
-                    <p class="text-[10px] text-slate-500 mt-1">🔒 Privacidad total: nunca pedimos teléfono ni WhatsApp. El contacto es solo por chat interno anónimo.</p>
-
-                </div>
-
-
-
-                <button type="submit" id="btn-submit-pet"
-
-                    class="w-full bg-[#d97706] hover:bg-[#b45309] disabled:opacity-50 text-[#f8fafc] font-bold py-4 rounded-xl transition shadow-lg">
-
-                    Registrar mascota y generar QR
-
-                </button>
-
+                <button type="submit" id="btn-submit-pet" class="btn-primary">Registrar mascota y generar QR</button>
             </form>
-
         </section>
 
+        <section id="panel-success" class="card portal-card card__body hidden">
+            <div class="qr-success">
+                <div class="qr-success__icon" aria-hidden="true">✅</div>
+                <h2 class="qr-success__title">¡Mascota registrada!</h2>
+                <p id="success-pet-name" class="qr-success__pet"></p>
+                <p class="qr-success__hint">Tu token QR único ya está activo. Descargalo o imprimí la chapita.</p>
 
+                <div class="qr-display">
+                    <img id="qr-preview" src="" alt="Código QR de la mascota" width="220" height="220">
+                </div>
 
-        <!-- Éxito -->
+                <p id="success-scan-url" class="qr-success__url"></p>
 
-        <section id="panel-success" class="hidden bg-[#1e293b] rounded-2xl p-8 shadow-md border border-slate-600 text-center">
-
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#d97706]/20 text-3xl mb-4">
-
-                ✅
-
+                <div class="qr-actions">
+                    <a id="btn-download-qr" href="#" class="btn-primary" download>⬇️ Descargar QR (SVG)</a>
+                    <a id="btn-dashboard" href="/dashboard.html" class="btn-secondary">Ir a mi panel de control →</a>
+                    <button type="button" id="btn-register-another" class="btn-link">Registrar otra mascota</button>
+                </div>
             </div>
-
-            <h2 class="text-xl font-bold text-[#d97706] mb-2">¡Mascota registrada!</h2>
-
-            <p id="success-pet-name" class="text-slate-200 mb-1"></p>
-
-            <p id="success-scan-url" class="text-[10px] text-slate-500 break-all mb-4 px-2"></p>
-
-            <p class="text-xs text-slate-500 mb-6">Tu token QR único ya está activo. Descargá el SVG vectorial para la imprenta de chapitas.</p>
-
-
-
-            <a id="btn-download-qr" href="#"
-
-                class="inline-flex w-full items-center justify-center gap-2 bg-[#d97706] hover:bg-[#b45309] text-[#f8fafc] font-bold py-4 px-6 rounded-xl transition shadow-lg text-lg mb-4">
-
-                ⬇️ Descargar QR Vectorial (SVG)
-
-            </a>
-
-
-
-            <a id="link-preview-qr" href="#" target="_blank" rel="noopener"
-
-                class="block text-sm text-amber-500/90 hover:text-amber-400 underline mb-4">
-
-                Ver vista previa del QR
-
-            </a>
-
-
-
-            <a id="btn-dashboard" href="/dashboard.html"
-
-                class="inline-flex w-full items-center justify-center gap-2 bg-[#243044] hover:bg-[#334155] border-2 border-[#d97706]/50 text-[#fbbf24] font-bold py-4 px-6 rounded-2xl transition shadow-lg text-base mb-4">
-
-                Ir a mi Panel de Control →
-
-            </a>
-
-
-
-            <button type="button" id="btn-register-another"
-
-                class="text-sm text-slate-500 hover:text-amber-200 underline">
-
-                Registrar otra mascota
-
-            </button>
-
         </section>
 
-
-
-        <footer class="text-center text-xs text-slate-400 mt-8">
-
-            Honey App · Con amor para vos y tu compañero 💙🐾
-
+        <footer class="portal-footer">
+            <a href="/">← Volver al escaneo vecinal</a>
+            <p style="margin-top: 0.75rem;">Honey App · Con amor para vos y tu compañero 💙🐾</p>
         </footer>
-
     </div>
 
-
-
     <script>
-
         const STORAGE_KEY = "honey_owner_jwt";
-
         const EMAIL_KEY = "honey_owner_email";
-
         const $ = (id) => document.getElementById(id);
-
-
 
         let authToken = sessionStorage.getItem(STORAGE_KEY) || "";
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const forceRegisterMode = urlParams.get("modo") === "registro" || urlParams.get("nueva") === "1";
-
-
-
         function showBanner(message, type = "error") {
-
             const el = $("statusBanner");
-
+            el.className = `status-banner status-banner--${type === "success" ? "success" : type === "info" ? "info" : "error"}`;
             el.textContent = message;
-
-            el.classList.remove("hidden", "bg-red-950/40", "border-red-800", "text-red-300", "bg-amber-950/50", "border-amber-700", "text-amber-200");
-
-            if (type === "success") {
-
-                el.classList.add("bg-amber-950/50", "border-amber-700", "text-amber-200");
-
-            } else {
-
-                el.classList.add("bg-red-950/40", "border-red-800", "text-red-300");
-
-            }
-
-            el.classList.add("border");
-
             el.classList.remove("hidden");
-
         }
-
-
 
         function hideBanner() {
-
             $("statusBanner").classList.add("hidden");
-
         }
 
+        function requireAuth() {
+            if (!authToken) {
+                window.location.replace("/login");
+                return false;
+            }
+            return true;
+        }
 
-
-        function setLoggedIn(email) {
-
-            $("panel-login").classList.add("hidden");
-
+        function showRegisterPanel() {
             $("panel-register").classList.remove("hidden");
-
             $("panel-success").classList.add("hidden");
-
-            $("owner-label").textContent = email ? `Sesión: ${email}` : "";
-
+            $("owner-label").textContent = sessionStorage.getItem(EMAIL_KEY)
+                ? `Sesión: ${sessionStorage.getItem(EMAIL_KEY)}`
+                : "Sesión activa";
         }
 
-
-
-        function setLoggedOut() {
-
+        function logout() {
             authToken = "";
-
             sessionStorage.removeItem(STORAGE_KEY);
-
             sessionStorage.removeItem(EMAIL_KEY);
-
-            $("panel-login").classList.remove("hidden");
-
-            $("panel-register").classList.add("hidden");
-
-            $("panel-success").classList.add("hidden");
-
+            window.location.href = "/login";
         }
-
-
-
-        function buildAgeString() {
-
-            const value = $("pet-age-value").value.trim();
-
-            const unit = $("pet-age-unit").value;
-
-            if (!value) return "";
-
-            return `${value} ${unit}`;
-
-        }
-
-
-
-        async function apiJson(path, options = {}) {
-
-            const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-
-            if (authToken) headers.Authorization = `Bearer ${authToken}`;
-
-            const res = await fetch(path, { ...options, headers });
-
-            const data = await res.json().catch(() => ({}));
-
-            if (!res.ok) {
-
-                const msg = data.error || data.message || `Error ${res.status}`;
-
-                throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
-
-            }
-
-            return data;
-
-        }
-
-
-
-        async function fetchWarRoom() {
-
-            const res = await fetch("/api/owner/war-room", {
-
-                headers: { Authorization: `Bearer ${authToken}` },
-
-            });
-
-            if (res.status === 401) {
-
-                setLoggedOut();
-
-                return null;
-
-            }
-
-            const data = await res.json().catch(() => ({}));
-
-            if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-
-            return data;
-
-        }
-
-
-
-        async function routeAuthenticatedUser(options = {}) {
-
-            const { afterLogin = false } = options;
-
-            try {
-
-                const data = await fetchWarRoom();
-
-                if (!data) return;
-
-
-
-                const hasPets = Array.isArray(data.pets) && data.pets.length > 0;
-
-
-
-                if (hasPets && !forceRegisterMode) {
-
-                    window.location.replace("/dashboard.html");
-
-                    return;
-
-                }
-
-
-
-                setLoggedIn(sessionStorage.getItem(EMAIL_KEY) || "Cuenta activa");
-
-
-
-                if (afterLogin && hasPets && forceRegisterMode) {
-
-                    showBanner("Sesión iniciada · podés registrar otra mascota", "success");
-
-                } else if (afterLogin) {
-
-                    showBanner("Sesión iniciada · registrá tu primera mascota", "success");
-
-                } else if (!hasPets) {
-
-                    showBanner("Registrá tu primera mascota para activar el QR", "success");
-
-                }
-
-            } catch (err) {
-
-                showBanner(err.message);
-
-            }
-
-        }
-
-
-
-        $("pet-photo").addEventListener("change", (e) => {
-
-            const file = e.target.files?.[0];
-
-            const preview = $("photo-preview");
-
-            if (!file) {
-
-                preview.classList.add("hidden");
-
-                $("photo-label").textContent = "📷 Tocá para subir una foto";
-
-                return;
-
-            }
-
-            $("photo-label").textContent = file.name;
-
-            preview.src = URL.createObjectURL(file);
-
-            preview.classList.remove("hidden");
-
-        });
-
-
-
-        $("form-login").addEventListener("submit", async (e) => {
-
-            e.preventDefault();
-
-            hideBanner();
-
-            const btn = $("btn-login");
-
-            btn.disabled = true;
-
-            try {
-
-                const data = await apiJson("/api/auth/login", {
-
-                    method: "POST",
-
-                    body: JSON.stringify({
-
-                        email: $("login-email").value.trim(),
-
-                        password: $("login-password").value,
-
-                    }),
-
-                });
-
-                authToken = data.token;
-
-                const email = $("login-email").value.trim();
-
-                sessionStorage.setItem(STORAGE_KEY, authToken);
-
-                sessionStorage.setItem(EMAIL_KEY, email);
-
-                await routeAuthenticatedUser({ afterLogin: true });
-
-            } catch (err) {
-
-                showBanner(err.message);
-
-            } finally {
-
-                btn.disabled = false;
-
-            }
-
-        });
-
-
-
-        $("btn-logout").addEventListener("click", () => {
-
-            setLoggedOut();
-
-            hideBanner();
-
-        });
-
-
 
         function appendIfFilled(formData, key, value) {
-
             const trimmed = (value ?? "").trim();
-
             if (trimmed) formData.append(key, trimmed);
-
         }
 
+        if (!requireAuth()) {
+            /* redirect en curso */
+        } else {
+            showRegisterPanel();
+        }
 
+        $("pet-photo").addEventListener("change", (e) => {
+            const file = e.target.files?.[0];
+            const preview = $("photo-preview");
+            if (!file) {
+                preview.classList.add("hidden");
+                preview.src = "";
+                $("photo-label").textContent = "📷 Tocá para subir una foto (opcional)";
+                return;
+            }
+            $("photo-label").textContent = file.name;
+            preview.src = URL.createObjectURL(file);
+            preview.classList.remove("hidden");
+        });
+
+        $("btn-logout").addEventListener("click", logout);
 
         $("form-pet").addEventListener("submit", async (e) => {
-
             e.preventDefault();
-
             hideBanner();
-
             const btn = $("btn-submit-pet");
-
             btn.disabled = true;
 
-
-
             const formData = new FormData();
-
             formData.append("name", $("pet-name").value.trim());
-
             formData.append("species", $("pet-species").value);
-
-            formData.append("breed", $("pet-breed").value.trim());
-
             formData.append("finderMessage", $("pet-finder-message").value.trim());
-
-
-
-            const age = buildAgeString();
-
-            if (age) formData.append("age", age);
-
+            appendIfFilled(formData, "breed", $("pet-breed").value);
             appendIfFilled(formData, "sex", $("pet-sex").value);
-
-            appendIfFilled(formData, "size", $("pet-size").value);
-
             appendIfFilled(formData, "color", $("pet-color").value);
 
-            appendIfFilled(formData, "distinguishingMarks", $("pet-distinguishing-marks").value);
-
-            appendIfFilled(formData, "zipCode", $("pet-zip-code").value);
-
-            appendIfFilled(formData, "neighborhood", $("pet-neighborhood").value);
-
-
-
-            appendIfFilled(formData, "medicalConditions", $("medicalConditions").value);
-
-            appendIfFilled(formData, "medications", $("medications").value);
-
-            appendIfFilled(formData, "allergies", $("allergies").value);
-
-            appendIfFilled(formData, "behavioralNotes", $("behavioralNotes").value);
-
-
-
             const photoFile = $("pet-photo").files?.[0];
-
             if (photoFile) formData.append("photo", photoFile);
 
-
-
             try {
-
                 const res = await fetch("/api/pets", {
-
                     method: "POST",
-
                     headers: { Authorization: `Bearer ${authToken}` },
-
                     body: formData,
-
                 });
-
                 const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || data.message || `Error ${res.status}`);
 
-                if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-
-
+                const qrUrl = data.qrSvgUrl || `/api/qr/generate/${data.qrToken}`;
+                const downloadUrl = data.qrSvgDownloadUrl || `${qrUrl}?download=1`;
 
                 $("panel-register").classList.add("hidden");
-
                 $("panel-success").classList.remove("hidden");
-
-                $("success-pet-name").textContent = `${data.pet.name} · Token listo para imprenta`;
-
-                $("success-scan-url").textContent = data.scanUrl ? `URL del QR: ${data.scanUrl}` : "";
-
-
-
-                $("btn-download-qr").href = data.qrSvgDownloadUrl || `/api/qr/generate/${data.qrToken}?download=1`;
-
-                $("link-preview-qr").href = data.qrSvgUrl || `/api/qr/generate/${data.qrToken}`;
-
+                $("success-pet-name").textContent = `${data.pet?.name || "Mascota"} · Chapita lista para imprimir`;
+                $("success-scan-url").textContent = data.scanUrl ? `URL de escaneo: ${data.scanUrl}` : "";
+                $("qr-preview").src = `${qrUrl}?t=${Date.now()}`;
+                $("btn-download-qr").href = downloadUrl;
             } catch (err) {
-
-                showBanner(err.message);
-
+                if (String(err.message).includes("401") || String(err.message).toLowerCase().includes("token")) {
+                    logout();
+                    return;
+                }
+                showBanner(err.message || "No se pudo registrar la mascota", "error");
             } finally {
-
                 btn.disabled = false;
-
             }
-
         });
-
-
 
         $("btn-register-another").addEventListener("click", () => {
-
             $("form-pet").reset();
-
             $("photo-preview").classList.add("hidden");
-
-            $("photo-label").textContent = "📷 Tocá para subir una foto";
-
-            $("pet-finder-message").value =
-
-                "¡Hola! Estoy perdido, por favor dale al botón de abajo para avisarle a mi dueño";
-
-            $("panel-success").classList.add("hidden");
-
-            $("panel-register").classList.remove("hidden");
-
+            $("photo-preview").src = "";
+            $("photo-label").textContent = "📷 Tocá para subir una foto (opcional)";
+            $("pet-finder-message").value = "¡Hola! Estoy perdido, por favor dale al botón de abajo para avisarle a mi dueño";
+            showRegisterPanel();
             hideBanner();
-
         });
-
-
-
-        (async function initSessionRouting() {
-
-            if (!authToken) return;
-
-            $("panel-login").classList.add("hidden");
-
-            $("panel-register").classList.add("hidden");
-
-            showBanner("Verificando tu cuenta…", "success");
-
-            await routeAuthenticatedUser();
-
-        })();
-
     </script>
-
 </body>
-
 </html>
-
-

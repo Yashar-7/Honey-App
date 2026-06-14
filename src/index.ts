@@ -28,6 +28,14 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/login", (_req, res) => {
+  res.redirect("/login.html");
+});
+
+app.get("/registro", (_req, res) => {
+  res.redirect("/registro.html");
+});
+
 /** Vercel puede entregar rutas /api sin el prefijo; restauramos el path esperado por Express. */
 app.use((req, _res, next) => {
   const reqPath = req.path;

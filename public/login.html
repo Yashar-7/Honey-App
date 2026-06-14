@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Honey App — Crear cuenta</title>
+    <title>Honey App — Portal del Dueño</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -11,35 +11,31 @@
         <header class="portal-header">
             <img src="/assets/logo.svg" alt="Honey App" class="logo" width="200" height="45" decoding="async">
             <span class="portal-badge">Portal del dueño</span>
-            <h1 class="portal-title">Creá tu cuenta</h1>
-            <p class="portal-subtitle">Después podrás registrar mascotas y descargar el QR para la imprenta</p>
+            <h1 class="portal-title">Gestioná tus mascotas</h1>
+            <p class="portal-subtitle">Iniciá sesión para registrar chapitas QR y acceder a tu panel</p>
         </header>
 
         <div id="statusBanner" class="status-banner hidden"></div>
 
         <section class="card portal-card card__body">
-            <h2>Registrate</h2>
-            <p class="form-hint" style="margin-bottom: 1rem;">Solo te pedimos lo esencial para empezar</p>
+            <h2>Iniciar sesión</h2>
+            <p class="form-hint" style="margin-bottom: 1rem;">Usá tu cuenta de dueño para continuar</p>
 
-            <form id="form-register" class="form-stack">
+            <form id="form-login" class="form-stack">
                 <div class="form-field">
-                    <label class="form-label" for="reg-name">Tu nombre</label>
-                    <input id="reg-name" class="form-input" type="text" required maxlength="80" autocomplete="name" placeholder="Ej: María García">
+                    <label class="form-label" for="login-email">Email</label>
+                    <input id="login-email" class="form-input" type="email" required autocomplete="email" placeholder="tu@email.com">
                 </div>
                 <div class="form-field">
-                    <label class="form-label" for="reg-email">Email</label>
-                    <input id="reg-email" class="form-input" type="email" required autocomplete="email" placeholder="tu@email.com">
+                    <label class="form-label" for="login-password">Contraseña</label>
+                    <input id="login-password" class="form-input" type="password" required autocomplete="current-password" placeholder="••••••••">
                 </div>
-                <div class="form-field">
-                    <label class="form-label" for="reg-password">Contraseña</label>
-                    <input id="reg-password" class="form-input" type="password" required minlength="6" autocomplete="new-password" placeholder="Mínimo 6 caracteres">
-                </div>
-                <button type="submit" id="btn-register" class="btn-primary">Crear cuenta</button>
+                <button type="submit" id="btn-login" class="btn-primary">Entrar al portal</button>
             </form>
 
             <p class="portal-divider">
-                ¿Ya tenés cuenta?
-                <a href="/login">Iniciá sesión</a>
+                ¿No tenés cuenta?
+                <a href="/cuenta.html">Creá una aquí</a>
             </p>
         </section>
 
@@ -56,7 +52,7 @@
 
         function showBanner(message, type = "error") {
             const el = $("statusBanner");
-            el.className = `status-banner status-banner--${type === "success" ? "success" : "info"}`;
+            el.className = `status-banner status-banner--${type === "success" ? "success" : type === "info" ? "info" : "error"}`;
             el.textContent = message;
             el.classList.remove("hidden");
         }
@@ -65,29 +61,28 @@
             window.location.replace("/registro");
         }
 
-        $("form-register").addEventListener("submit", async (e) => {
+        $("form-login").addEventListener("submit", async (e) => {
             e.preventDefault();
-            const btn = $("btn-register");
+            const btn = $("btn-login");
             btn.disabled = true;
 
             try {
-                const res = await fetch("/api/auth/register", {
+                const res = await fetch("/api/auth/login", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        name: $("reg-name").value.trim(),
-                        email: $("reg-email").value.trim(),
-                        password: $("reg-password").value,
+                        email: $("login-email").value.trim(),
+                        password: $("login-password").value,
                     }),
                 });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data.error || data.message || `Error ${res.status}`);
 
                 sessionStorage.setItem(STORAGE_KEY, data.token);
-                sessionStorage.setItem(EMAIL_KEY, $("reg-email").value.trim());
+                sessionStorage.setItem(EMAIL_KEY, $("login-email").value.trim());
                 window.location.href = "/registro";
             } catch (err) {
-                showBanner(err.message || "No se pudo crear la cuenta", "error");
+                showBanner(err.message || "No se pudo iniciar sesión", "error");
             } finally {
                 btn.disabled = false;
             }
