@@ -4,7 +4,7 @@
 
 @layer base {
   * {
-    @apply border-mustard/20;
+    @apply border-border/40;
   }
 
   body {

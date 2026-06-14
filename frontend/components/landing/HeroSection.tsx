@@ -1,52 +1,59 @@
-import { Button } from "@/components/ui/button";
+import { LoginLink } from "./LoginLink";
+import { PrimaryCta } from "./PrimaryCta";
 
 export function HeroSection() {
   return (
-    <section className="relative overflow-hidden px-4 pb-16 pt-10 sm:px-6 sm:pb-20 sm:pt-16">
+    <section className="relative overflow-hidden px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-12">
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,183,0,0.12),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,193,7,0.1),transparent_55%)]"
         aria-hidden="true"
       />
 
-      <div className="relative mx-auto max-w-6xl">
-        <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-4 inline-flex rounded-full border border-mustard/30 bg-mustard/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-mustard">
-            Seguridad inteligente para mascotas
+      <div className="relative mx-auto max-w-6xl lg:grid lg:grid-cols-2 lg:items-center lg:gap-12">
+        <div className="text-center lg:text-left">
+          <p className="mb-3 inline-flex rounded-full border border-honey/30 bg-honey/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-honey">
+            Si se escapa, cada minuto cuenta
           </p>
 
-          <h1 className="text-3xl font-extrabold leading-tight text-white sm:text-5xl sm:leading-tight">
-            Honey App: Seguridad Real para tu Mascota
+          <h1 className="text-[2.125rem] font-extrabold leading-[1.1] text-white sm:text-5xl lg:text-[3rem]">
+            Honey App: que tu mascota vuelva a casa
           </h1>
 
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-white/70 sm:text-lg">
-            Protegé a tu compañero con un sistema privado de reencuentro. Sin exponer tu
-            teléfono, sin WhatsApp y con alertas directas cuando alguien escanea su chapita QR.
+          <p className="mx-auto mt-4 max-w-xl text-[17px] leading-relaxed text-muted lg:mx-0">
+            El 90% de los perros y gatos que se pierden no regresan. Con una chapita QR en el
+            collar, cualquier persona te avisa al instante — sin dar tu WhatsApp ni tu número.
           </p>
 
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button size="lg" asChild>
-              <a href="/registro">Registrar mi mascota</a>
-            </Button>
-            <Button variant="secondary" size="lg" asChild>
-              <a href="/login">Ya tengo cuenta</a>
-            </Button>
+          <div className="mt-6 flex flex-col items-center gap-3 lg:items-start">
+            <PrimaryCta />
+            <p className="text-xs text-muted/90">Gratis empezar · 2 minutos · Chapita QR incluida</p>
+            <LoginLink />
           </div>
         </div>
 
-        <div className="mx-auto mt-12 grid max-w-4xl gap-4 sm:grid-cols-3">
-          {[
-            { value: "100%", label: "Chat interno y anónimo" },
-            { value: "24/7", label: "Alertas en tiempo real" },
-            { value: "1 QR", label: "Identificación instantánea" },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-5 text-center backdrop-blur-sm"
-            >
-              <p className="text-2xl font-extrabold text-mustard">{stat.value}</p>
-              <p className="mt-1 text-sm text-white/65">{stat.label}</p>
+        <div className="relative mx-auto mt-10 w-full max-w-md lg:mt-0 lg:max-w-none">
+          <div className="relative overflow-hidden rounded-[20px] border border-border bg-card">
+            <div className="relative aspect-[4/5] sm:aspect-[5/4]">
+              <img
+                src="/assets/honey-app-logo.png"
+                alt="Mascota con chapita QR Honey App"
+                className="absolute inset-0 h-full w-full object-contain p-10 sm:p-12"
+                decoding="async"
+              />
+              <div
+                className="absolute inset-0 bg-gradient-to-t from-night via-night/20 to-transparent"
+                aria-hidden="true"
+              />
+              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+                <p className="text-sm font-semibold text-white">
+                  Escaneada → aviso instantáneo
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Chapita QR en el collar · Privacidad total
+                </p>
+              </div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </section>

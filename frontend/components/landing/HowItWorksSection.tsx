@@ -1,52 +1,36 @@
-import { ClipboardList, MessageCircle, QrCode } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Bell, ClipboardList, QrCode } from "lucide-react";
 
 const STEPS = [
-  {
-    icon: ClipboardList,
-    title: "Registrá tu perfil",
-    description:
-      "Creá la ficha de tu mascota con foto, datos clave y observaciones de salud en minutos.",
-  },
-  {
-    icon: QrCode,
-    title: "Generá tu QR",
-    description:
-      "Obtené una chapita digital única para que cualquier vecino pueda avisarte al instante.",
-  },
-  {
-    icon: MessageCircle,
-    title: "Recibí alertas privadas",
-    description:
-      "Cuando escanean el QR, recibís ubicación y chat seguro sin compartir tu número.",
-  },
+  { icon: ClipboardList, label: "Registrá a tu mascota" },
+  { icon: QrCode, label: "Pegá la chapita QR" },
+  { icon: Bell, label: "Recibí el aviso al toque" },
 ] as const;
 
 export function HowItWorksSection() {
   return (
-    <section id="como-funciona" className="px-4 py-16 sm:px-6 sm:py-20">
+    <section id="como-funciona" className="px-4 py-12 sm:px-6 sm:py-16">
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="text-2xl font-extrabold text-white sm:text-3xl">Cómo funciona</h2>
-          <p className="mt-3 text-sm text-white/65 sm:text-base">
-            Tres pasos simples para que tu mascota vuelva a casa con total privacidad.
-          </p>
-        </div>
+        <h2 className="text-center text-2xl font-extrabold text-white sm:text-3xl">
+          En 3 pasos, volvé a abrazarlo
+        </h2>
 
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:gap-6">
           {STEPS.map((step, index) => {
             const Icon = step.icon;
             return (
-              <Card key={step.title} className="flex flex-col gap-4 border-mustard/20">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-mustard/15 text-mustard">
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                  </span>
-                  <span className="text-sm font-bold text-mustard/80">Paso {index + 1}</span>
-                </div>
-                <h3 className="text-lg font-bold text-white">{step.title}</h3>
-                <p className="text-sm leading-relaxed text-white/65">{step.description}</p>
-              </Card>
+              <div key={step.label} className="relative flex flex-1 flex-col items-center text-center">
+                {index < STEPS.length - 1 && (
+                  <span
+                    className="absolute left-[calc(50%+2rem)] top-7 hidden h-px w-[calc(100%-4rem)] border-t border-dashed border-border sm:block"
+                    aria-hidden="true"
+                  />
+                )}
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl border-2 border-honey bg-card text-honey">
+                  <Icon className="h-7 w-7" aria-hidden="true" />
+                </span>
+                <p className="mt-1 text-xs font-bold text-honey/80">Paso {index + 1}</p>
+                <p className="mt-2 text-base font-bold text-white">{step.label}</p>
+              </div>
             );
           })}
         </div>

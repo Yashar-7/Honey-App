@@ -1,51 +1,40 @@
-import { Lock, ShieldCheck } from "lucide-react";
+import { Check } from "lucide-react";
 import { Card } from "@/components/ui/card";
+
+const TRUST_POINTS = [
+  "Sin WhatsApp ni llamadas de desconocidos",
+  "Sin exponer tu número de celular",
+  "Chat 100% interno y anónimo",
+] as const;
 
 export function TrustSection() {
   return (
-    <section className="px-4 py-16 sm:px-6 sm:py-20">
+    <section className="px-4 py-12 sm:px-6 sm:py-16">
       <div className="mx-auto max-w-6xl">
-        <Card className="relative overflow-hidden border-mustard/35 bg-gradient-to-br from-card to-night p-8 sm:p-10">
-          <div
-            className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-mustard/10 blur-3xl"
-            aria-hidden="true"
-          />
+        <Card className="border-honey/40 bg-card p-6 sm:p-10">
+          <h2 className="text-2xl font-extrabold text-white sm:text-3xl">
+            Privacidad total. Punto.
+          </h2>
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted sm:text-base">
+            Sin WhatsApp. Sin números. Todo el contacto ocurre dentro de Honey App, con alertas
+            discretas y trazabilidad profesional.
+          </p>
 
-          <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-mustard/15 text-mustard">
-              <ShieldCheck className="h-8 w-8" aria-hidden="true" />
-            </div>
-
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-widest text-mustard">
-                Confianza
-              </p>
-              <h2 className="text-2xl font-extrabold text-white sm:text-3xl">
-                Privacidad Total: Sin WhatsApp, sin números telefónicos, chat 100% interno
-              </h2>
-              <p className="max-w-3xl text-sm leading-relaxed text-white/70 sm:text-base">
-                Honey App protege la identidad del dueño y del vecino colaborador. Toda la
-                comunicación ocurre dentro de la plataforma, con alertas discretas y trazabilidad
-                profesional para veterinarias y pet shops aliados.
-              </p>
-            </div>
-          </div>
-
-          <ul className="relative mt-8 grid gap-3 sm:grid-cols-3">
-            {[
-              "Sin exponer datos personales",
-              "Canal seguro dueño ↔ vecino",
-              "Historial centralizado en tu panel",
-            ].map((item) => (
-              <li
-                key={item}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-night/40 px-4 py-3 text-sm text-white/75"
-              >
-                <Lock className="h-4 w-4 shrink-0 text-mustard" aria-hidden="true" />
+          <ul className="mt-6 space-y-3">
+            {TRUST_POINTS.map((item) => (
+              <li key={item} className="flex items-start gap-3 text-sm text-white/90 sm:text-base">
+                <Check className="mt-0.5 h-5 w-5 shrink-0 text-honey" aria-hidden="true" />
                 {item}
               </li>
             ))}
           </ul>
+
+          <a
+            href="#como-funciona"
+            className="mt-6 inline-block text-sm font-semibold text-honey underline-offset-4 hover:underline"
+          >
+            Ver cómo funciona el chat →
+          </a>
         </Card>
       </div>
     </section>

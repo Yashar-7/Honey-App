@@ -1,34 +1,30 @@
-import { Store } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { PrimaryCta } from "./PrimaryCta";
+import { REGISTRO_HREF } from "./constants";
 
 export function FinalCtaSection() {
   return (
-    <section className="px-4 pb-20 pt-4 sm:px-6 sm:pb-24">
-      <div className="mx-auto max-w-6xl">
-        <Card className="border-mustard/30 bg-gradient-to-r from-card via-card to-night/80 p-8 text-center sm:p-12">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-mustard/15 text-mustard">
-            <Store className="h-7 w-7" aria-hidden="true" />
-          </div>
+    <section className="px-4 py-16 sm:px-6 sm:py-20">
+      <div className="mx-auto max-w-6xl rounded-[20px] border border-border bg-card px-6 py-12 text-center sm:px-12 sm:py-16">
+        <h2 className="text-2xl font-extrabold text-white sm:text-3xl">No esperes a que pase.</h2>
+        <p className="mx-auto mt-3 max-w-lg text-sm text-muted sm:text-base">
+          Registrá a tu mascota hoy. Mañana puede ser tarde.
+        </p>
 
-          <h2 className="text-2xl font-extrabold text-white sm:text-3xl">
-            ¿Sos un Pet Shop? Sumá a Honey App a tus servicios
-          </h2>
+        <div className="mt-8 flex justify-center">
+          <PrimaryCta label="Registrar mi mascota — es gratis" />
+        </div>
 
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-white/70 sm:text-base">
-            Ofrecé chapitas QR inteligentes, seguimiento de mascotas perdidas y un canal de
-            confianza para tus clientes. Posicioná tu negocio como aliado en seguridad animal.
+        <div className="mt-10 border-t border-border pt-8">
+          <p className="text-sm text-muted">
+            ¿Sos pet shop o veterinaria?{" "}
+            <a
+              href={REGISTRO_HREF}
+              className="font-semibold text-honey underline-offset-4 hover:underline"
+            >
+              Sumá Honey App a tus servicios →
+            </a>
           </p>
-
-          <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-            <Button size="lg" asChild>
-              <a href="/registro">Empezar con Honey App</a>
-            </Button>
-            <Button variant="secondary" size="lg" asChild>
-              <a href="/login">Acceder al panel dueño</a>
-            </Button>
-          </div>
-        </Card>
+        </div>
       </div>
     </section>
   );
