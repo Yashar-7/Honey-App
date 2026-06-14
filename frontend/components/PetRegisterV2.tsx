@@ -783,7 +783,7 @@ export function PetRegisterV2({
               )}
 
               <a
-                href="/dashboard.html"
+                href="/dashboard"
                 className="block text-xs text-mustard/80 underline-offset-2 hover:text-mustard hover:underline"
               >
                 Agregar más datos después →

@@ -10,7 +10,7 @@ self.addEventListener("push", (event) => {
   const options = {
     body: data.body ?? "",
     tag: data.tag ?? "honey-app",
-    data: { url: data.url ?? "/dashboard.html", ...(data.data ?? {}) },
+    data: { url: data.url ?? "/dashboard", ...(data.data ?? {}) },
     icon: "/assets/honey-app-logo.png",
     badge: "/assets/honey-app-logo.png",
   };
@@ -20,13 +20,13 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = event.notification.data?.url ?? "/dashboard.html";
+  const targetUrl = event.notification.data?.url ?? "/dashboard";
   const absoluteUrl = new URL(targetUrl, self.location.origin).href;
 
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
       for (const client of list) {
-        if (client.url.includes("/dashboard.html") && "focus" in client) {
+        if (client.url.includes("/dashboard") && "focus" in client) {
           return client.focus();
         }
       }

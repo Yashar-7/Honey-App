@@ -18,8 +18,10 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
 const publicDir = path.join(__dirname, "..", "public");
-app.use(express.static(publicDir));
-app.use("/uploads", express.static(path.join(publicDir, "uploads")));
+
+function sendPublicPage(res: express.Response, fileName: string) {
+  res.sendFile(path.join(publicDir, fileName));
+}
 
 app.get("/health", (_req, res) => {
   res.json({
@@ -30,23 +32,46 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/login", (_req, res) => {
-  res.redirect("/login.html");
+  sendPublicPage(res, "login.html");
 });
 
 app.get("/dashboard", (_req, res) => {
-  res.redirect("/dashboard.html");
+  sendPublicPage(res, "dashboard.html");
 });
 
-app.get("/registro", (req, res) => {
+app.get("/cuenta", (_req, res) => {
+  sendPublicPage(res, "cuenta.html");
+});
+
+app.get(["/registro", "/registro/"], (_req, res) => {
   const v2Index = path.join(publicDir, "registro-v2", "index.html");
-  const queryStart = req.url.indexOf("?");
-  const query = queryStart >= 0 ? req.url.slice(queryStart) : "";
   if (existsSync(v2Index)) {
-    res.redirect(query ? `/registro-v2/${query}` : "/registro-v2/");
+    res.sendFile(v2Index);
     return;
   }
-  res.redirect(`/registro.html${query}`);
+  sendPublicPage(res, "registro.html");
 });
+
+app.get("/login.html", (_req, res) => {
+  res.redirect(301, "/login");
+});
+
+app.get("/dashboard.html", (_req, res) => {
+  res.redirect(301, "/dashboard");
+});
+
+app.get("/cuenta.html", (_req, res) => {
+  res.redirect(301, "/cuenta");
+});
+
+app.get(["/registro-v2", "/registro-v2/"], (req, res) => {
+  const queryStart = req.url.indexOf("?");
+  const query = queryStart >= 0 ? req.url.slice(queryStart) : "";
+  res.redirect(301, query ? `/registro${query}` : "/registro");
+});
+
+app.use(express.static(publicDir));
+app.use("/uploads", express.static(path.join(publicDir, "uploads")));
 
 /** Vercel puede entregar rutas /api sin el prefijo; restauramos el path esperado por Express. */
 app.use((req, _res, next) => {
@@ -81,6 +106,6 @@ if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`Servidor escuchando en http://localhost:${PORT}`);
     console.log(`Vista móvil (vecino): http://localhost:${PORT}/`);
-    console.log(`War Room dueño: http://localhost:${PORT}/dashboard.html`);
+    console.log(`War Room dueño: http://localhost:${PORT}/dashboard`);
   });
 }

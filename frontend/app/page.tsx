@@ -30,7 +30,7 @@ export default function RegistroPage() {
         window.location.replace("/login");
         return;
       }
-      if (dest === "/dashboard.html") {
+      if (dest !== "/registro") {
         window.location.replace(dest);
         return;
       }

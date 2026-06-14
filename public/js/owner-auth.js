@@ -21,7 +21,7 @@ async function resolveOwnerDestination(token, options = {}) {
 
         const data = await res.json();
         const hasPets = Array.isArray(data.pets) && data.pets.length > 0;
-        return hasPets ? "/dashboard.html" : "/registro";
+        return hasPets ? "/dashboard" : "/registro";
     } catch {
         return "/registro";
     }

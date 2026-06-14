@@ -26,7 +26,7 @@ export async function notifyOwnerOfPetEvent(
           ? `🔔 ${event.petName}`
           : `💬 ${event.petName}`,
     body: event.body,
-    url: "/dashboard.html",
+    url: "/dashboard",
     tag: `${event.type}:${event.petId}`,
     data: {
       type: event.type,

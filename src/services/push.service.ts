@@ -93,7 +93,7 @@ export async function notifyPetOwner(userId: string, payload: WebPushPayload) {
   const notification = JSON.stringify({
     title: payload.title,
     body: payload.body,
-    url: payload.url ?? "/dashboard.html",
+    url: payload.url ?? "/dashboard",
     tag: payload.tag ?? "honey-app",
     data: payload.data ?? {},
   });
