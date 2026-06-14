@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Honey App — Ayudá a esta mascota</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <div id="app-shell" class="app-shell">
+        <header id="main-header" class="header">
+            <img src="/assets/logo.svg" alt="Honey App" class="logo" width="200" height="45" decoding="async">
+            <p class="tagline">Vecino colaborador · Ayudá a que vuelva a casa</p>
+        </header>
+
+        <div id="statusBanner" class="status-banner hidden"></div>
+
+        <main id="panel-loading" class="panel panel--center">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Verificando chapita QR…</p>
+        </main>
+
+        <main id="panel-no-token" class="panel panel--center hidden">
+            <div class="card card--hero">
+                <h2 class="card__title">Escaneá la chapita</h2>
+                <p class="card__text">Este enlace necesita un código QR válido. Volvé a escanear la chapita de la mascota.</p>
+                <button type="button" id="btn-scan-tag" class="btn-primary btn-scan">📱 Escanear chapita</button>
+                <input id="input-scan-qr" type="file" accept="image/*" capture="environment" class="hidden" aria-hidden="true" tabindex="-1">
+
+                <div id="scan-error" class="scan-error hidden" role="alert">
+                    <div class="scan-error__icon" aria-hidden="true">📷</div>
+                    <h3 id="scan-error-title" class="scan-error__title">No pudimos leer la chapita</h3>
+                    <p id="scan-error-text" class="scan-error__text">Intentá nuevamente con mejor luz, sin reflejos y con el QR bien centrado.</p>
+                    <button type="button" id="btn-scan-retry" class="btn-primary btn-scan">📱 Intentar nuevamente</button>
+                </div>
+            </div>
+        </main>
+
+        <main id="panel-pet" class="panel panel--pet hidden">
+
+            <div id="ficha-body" class="ficha-body">
+                <section class="card card--overflow fade-up">
+                    <div id="pet-photo-wrap" class="pet-photo-wrap hidden">
+                        <img id="pet-photo" src="" alt="" class="pet-photo">
+                    </div>
+                    <div class="card__body">
+                        <span class="pet-badge">Mascota identificada</span>
+                        <h2 id="pet-name" class="pet-name"></h2>
+                        <p id="pet-meta" class="pet-meta"></p>
+                        <blockquote id="pet-finder-message" class="pet-message"></blockquote>
+                    </div>
+                </section>
+
+                <div class="privacy-shield fade-up fade-up-delay-1">
+                    <span class="privacy-shield__icon" aria-hidden="true">🔒</span>
+                    <div>
+                        <p class="privacy-shield__title">Comunicación 100% anónima</p>
+                        <p class="privacy-shield__text">Nunca pedimos teléfono ni WhatsApp. Todo el contacto con el dueño es interno y protegido por Honey.</p>
+                    </div>
+                </div>
+
+                <section id="section-health" class="health-observations hidden fade-up fade-up-delay-1" aria-labelledby="health-observations-title">
+                    <div class="health-observations__head">
+                        <svg class="health-observations__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                            <path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/>
+                        </svg>
+                        <h3 id="health-observations-title" class="health-observations__title">Observaciones de Salud</h3>
+                    </div>
+                    <p id="health-observations-text" class="health-observations__body"></p>
+                    <p class="health-observations__hint">Info médica compartida solo para cuidar mejor a esta mascota.</p>
+                </section>
+            </div>
+
+            <button type="button" id="btn-start-chat" class="btn-primary fade-up fade-up-delay-2">
+                💬 Iniciar Chat Seguro con el Dueño
+            </button>
+        </main>
+
+        <footer id="main-footer" class="footer">
+            Honey App · Comunidad que cuida mascotas 💙🐾
+            <a href="/login" class="owner-portal-link">¿Sos dueño? Registrá o gestioná tus mascotas aquí</a>
+        </footer>
+    </div>
+
+    <section id="panel-chat" class="panel-chat hidden" role="dialog" aria-modal="true" aria-label="Chat seguro con el dueño">
+        <header class="chat-header">
+            <div class="chat-header__row">
+                <button type="button" id="btn-chat-back" class="btn-back" aria-label="Volver a la ficha">← Ficha</button>
+                <p class="chat-header__title">🔒 Chat Seguro y Encriptado</p>
+                <span class="chat-header__spacer"></span>
+            </div>
+            <p class="chat-header__brand">Honey App</p>
+            <p class="chat-header__hint">Tu identidad y número están protegidos · sin teléfono ni WhatsApp</p>
+            <p id="chat-pet-label" class="chat-pet-label"></p>
+        </header>
+
+        <div class="chat-body">
+            <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div>
+            <div id="chat-empty-hint" class="chat-empty-hint hidden">
+                Escribí un mensaje para avisarle al dueño de forma anónima.
+            </div>
+        </div>
+
+        <div class="chat-input-wrapper" role="region" aria-label="Escribir mensaje">
+            <div class="chat-toolbar">
+                <button type="button" id="btn-gps" title="Compartir ubicación" class="btn-icon" aria-label="Compartir GPS">📍</button>
+                <label class="btn-icon" aria-label="Adjuntar foto">
+                    📷
+                    <input id="input-photo" type="file" accept="image/*" capture="environment" class="hidden">
+                </label>
+                <img id="photo-preview-thumb" class="photo-preview hidden" alt="">
+            </div>
+
+            <form id="chat-form" class="chat-form">
+                <label for="chat-input" class="sr-only">Mensaje para el dueño</label>
+                <input id="chat-input" type="text" maxlength="500" autocomplete="off" enterkeyhint="send"
+                    placeholder="Escribí tu mensaje…" class="chat-input">
+                <button type="submit" id="btn-send-chat" class="btn-send" aria-label="Enviar mensaje">
+                    <svg class="btn-send__icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/>
+                        <path d="m21.854 2.147-10.94 10.939"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <div id="scan-overlay" class="scan-overlay hidden" role="status" aria-live="polite" aria-busy="false">
+        <div class="scan-overlay__card">
+            <div class="spinner spinner--overlay" aria-hidden="true"></div>
+            <p id="scan-overlay-text" class="scan-overlay__text">Analizando chapita…</p>
+            <p class="scan-overlay__hint">Procesando la imagen, un momento por favor</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const QR_TOKEN = params.get("token")?.trim() || "";
+        const POLL_MS = 2500;
+        const SESSION_STORAGE_PREFIX = "honey_finder_chat_";
+
+        const FORBIDDEN_KEYS = ["phone", "whatsapp", "telefono", "tel", "mobile", "celular", "email"];
+
+        const START_CHAT_LABEL = "💬 Iniciar Chat Seguro con el Dueño";
+        const RESUME_CHAT_LABEL = "💬 Volver al Chat Seguro";
+
+        const state = {
+            sessionId: null,
+            pet: null,
+            chatActive: false,
+            pollTimer: null,
+            lastMessageFingerprint: "",
+            pendingPhoto: null,
+        };
+
+        const $ = (id) => document.getElementById(id);
+
+        function sessionStorageKey() {
+            return `${SESSION_STORAGE_PREFIX}${QR_TOKEN}`;
+        }
+
+        function loadPersistedSession() {
+            try {
+                const raw = localStorage.getItem(sessionStorageKey());
+                return raw ? JSON.parse(raw) : null;
+            } catch {
+                return null;
+            }
+        }
+
+        function persistSession() {
+            if (!QR_TOKEN || !state.sessionId) return;
+            localStorage.setItem(sessionStorageKey(), JSON.stringify({
+                sessionId: state.sessionId,
+                pet: state.pet,
+                chatActive: state.chatActive,
+                savedAt: Date.now(),
+            }));
+        }
+
+        function clearPersistedSession() {
+            localStorage.removeItem(sessionStorageKey());
+        }
+
+        async function validateSession(sessionId) {
+            try {
+                const res = await fetch(`/api/chat/sessions/${encodeURIComponent(sessionId)}/messages`);
+                if (!res.ok) return null;
+                const data = await res.json();
+                return data;
+            } catch {
+                return null;
+            }
+        }
+
+        function showPanel(id) {
+            ["panel-loading", "panel-no-token", "panel-pet"].forEach((pid) => {
+                $(pid).classList.toggle("hidden", pid !== id);
+            });
+        }
+
+        function showStatus(message, type = "info") {
+            const banner = $("statusBanner");
+            banner.className = `status-banner status-banner--${type}`;
+            banner.textContent = message;
+            banner.classList.remove("hidden");
+        }
+
+        function hideStatus() {
+            $("statusBanner").classList.add("hidden");
+        }
+
+        function setScanLoadingMessage(message) {
+            const el = $("scan-overlay-text");
+            if (el) el.textContent = message;
+        }
+
+        function showScanLoading(message = "Analizando chapita…") {
+            hideScanError();
+            hideStatus();
+            setScanLoadingMessage(message);
+            const overlay = $("scan-overlay");
+            overlay?.classList.remove("hidden");
+            overlay?.setAttribute("aria-busy", "true");
+            $("btn-scan-tag")?.setAttribute("disabled", "true");
+            $("btn-scan-retry")?.setAttribute("disabled", "true");
+        }
+
+        function hideScanLoading() {
+            const overlay = $("scan-overlay");
+            overlay?.classList.add("hidden");
+            overlay?.setAttribute("aria-busy", "false");
+            $("btn-scan-tag")?.removeAttribute("disabled");
+            $("btn-scan-retry")?.removeAttribute("disabled");
+        }
+
+        function showScanError(title, message) {
+            const titleEl = $("scan-error-title");
+            const textEl = $("scan-error-text");
+            if (titleEl) titleEl.textContent = title;
+            if (textEl) textEl.textContent = message;
+            $("scan-error")?.classList.remove("hidden");
+        }
+
+        function hideScanError() {
+            $("scan-error")?.classList.add("hidden");
+        }
+
+        function escapeHtml(text) {
+            return String(text ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function formatMessageTime(iso) {
+            try {
+                return new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+            } catch {
+                return "";
+            }
+        }
+
+        function sanitizePetPayload(raw) {
+            if (!raw || typeof raw !== "object") return null;
+            const safe = {};
+            for (const [key, value] of Object.entries(raw)) {
+                if (FORBIDDEN_KEYS.some((f) => key.toLowerCase().includes(f))) continue;
+                safe[key] = value;
+            }
+            return safe;
+        }
+
+        function messagesFingerprint(messages) {
+            if (!messages?.length) return "__empty__";
+            return messages.map((m) => `${m.id}:${m.createdAt}`).join("|");
+        }
+
+        function buildHealthObservationsText(pet) {
+            const chunks = [
+                pet.characteristics,
+                pet.medicalConditions,
+                pet.medications ? `Medicación: ${pet.medications}` : "",
+                pet.allergies ? `Alergias: ${pet.allergies}` : "",
+                pet.behavioralNotes ? `Comportamiento: ${pet.behavioralNotes}` : "",
+                pet.distinguishingMarks ? `Señas: ${pet.distinguishingMarks}` : "",
+            ]
+                .map((part) => (part ?? "").trim())
+                .filter(Boolean);
+            return chunks.join("\n\n");
+        }
+
+        function renderHealthObservations(pet) {
+            const section = $("section-health");
+            const textEl = $("health-observations-text");
+            const content = buildHealthObservationsText(pet);
+
+            if (!content) {
+                section.classList.add("hidden");
+                textEl.textContent = "";
+                return;
+            }
+
+            textEl.textContent = content;
+            section.classList.remove("hidden");
+        }
+
+        function renderMedicalRecord(pet) {
+            renderHealthObservations(pet);
+        }
+
+        function renderPetProfile(pet) {
+            $("pet-name").textContent = pet.name || "Mascota";
+            const metaParts = [pet.species, pet.breed, pet.sex, pet.size, pet.color, pet.age].filter(Boolean);
+            $("pet-meta").textContent = metaParts.length ? metaParts.join(" · ") : "Sin datos adicionales";
+            $("pet-finder-message").textContent = pet.finderMessage
+                ? `"${pet.finderMessage}"`
+                : "El dueño no dejó un mensaje público.";
+            $("chat-pet-label").textContent = pet.name ? `Mascota: ${pet.name}` : "";
+
+            const wrap = $("pet-photo-wrap");
+            const img = $("pet-photo");
+            if (pet.photoUrl) {
+                img.src = pet.photoUrl;
+                img.alt = `Foto de ${pet.name}`;
+                wrap.classList.remove("hidden");
+            } else {
+                wrap.classList.add("hidden");
+            }
+            renderMedicalRecord(pet);
+        }
+
+        function renderChatMessages(messages) {
+            const box = $("chat-messages");
+            const hint = $("chat-empty-hint");
+
+            if (!messages?.length) {
+                box.innerHTML = "";
+                hint.classList.remove("hidden");
+                return;
+            }
+
+            hint.classList.add("hidden");
+            box.innerHTML = messages.map((m) => {
+                const isOwner = m.sender === "owner";
+                const align = isOwner ? "chat-msg--owner" : "chat-msg--finder";
+                const bubble = isOwner ? "bubble-owner" : "bubble-finder";
+                const label = isOwner ? "Dueño (anónimo)" : "Vos";
+                const text = m.text || m.locationReference || "";
+                const img = m.imageUrl
+                    ? `<img src="${escapeHtml(m.imageUrl)}" alt="Adjunto" class="chat-bubble__img">`
+                    : "";
+
+                return `<div class="chat-msg ${align}">
+                    <div class="chat-bubble ${bubble}">
+                        <p class="chat-bubble__label">${label}</p>
+                        ${text ? `<p class="chat-bubble__text">${escapeHtml(text)}</p>` : ""}
+                        ${img}
+                        <time class="chat-bubble__time">${formatMessageTime(m.createdAt)}</time>
+                    </div>
+                </div>`;
+            }).join("");
+
+            requestAnimationFrame(() => {
+                scrollChatToBottom();
+            });
+        }
+
+        async function fetchMessages() {
+            if (!state.sessionId) return null;
+            const res = await fetch(`/api/chat/sessions/${encodeURIComponent(state.sessionId)}/messages`);
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+            return data.messages ?? [];
+        }
+
+        async function pollMessages() {
+            if (!state.sessionId || !state.chatActive) return;
+            try {
+                const messages = await fetchMessages();
+                const fp = messagesFingerprint(messages);
+                if (fp !== state.lastMessageFingerprint) {
+                    state.lastMessageFingerprint = fp;
+                    renderChatMessages(messages);
+                }
+            } catch (err) {
+                console.warn("Poll chat:", err.message);
+            }
+        }
+
+        function startPolling() {
+            stopPolling();
+            state.pollTimer = setInterval(pollMessages, POLL_MS);
+        }
+
+        function stopPolling() {
+            if (state.pollTimer) {
+                clearInterval(state.pollTimer);
+                state.pollTimer = null;
+            }
+        }
+
+        function updateStartChatButton() {
+            const btn = $("btn-start-chat");
+            if (!btn) return;
+
+            btn.classList.remove("hidden", "is-chat-open");
+            btn.disabled = false;
+
+            if (state.chatActive) {
+                btn.classList.add("is-chat-open");
+                return;
+            }
+
+            btn.textContent = state.sessionId ? RESUME_CHAT_LABEL : START_CHAT_LABEL;
+        }
+
+        function releaseChatFocus() {
+            const active = document.activeElement;
+            const panel = $("panel-chat");
+            if (active && active !== document.body && panel?.contains(active)) {
+                active.blur();
+            }
+        }
+
+        function hideChatPanel(immediate = false) {
+            const panel = $("panel-chat");
+            releaseChatFocus();
+            panel.classList.remove("is-open");
+            panel.classList.add("panel-chat--hidden");
+
+            const applyHidden = () => {
+                panel.classList.add("hidden");
+                panel.classList.remove("panel-chat--hidden");
+            };
+
+            if (immediate) {
+                applyHidden();
+            } else {
+                setTimeout(applyHidden, 400);
+            }
+        }
+
+        function showFichaView() {
+            $("ficha-body").classList.remove("is-collapsed");
+            $("main-header").classList.remove("hidden");
+            $("main-footer").classList.remove("hidden");
+            hideChatPanel($("panel-chat").classList.contains("hidden"));
+            updateStartChatButton();
+        }
+
+        function showChatView(skipAnimation = false) {
+            $("ficha-body").classList.add("is-collapsed");
+            $("main-header").classList.add("hidden");
+            $("main-footer").classList.add("hidden");
+            hideStatus();
+
+            const panel = $("panel-chat");
+            panel.classList.remove("hidden", "panel-chat--hidden");
+            updateStartChatButton();
+
+            if (skipAnimation) {
+                panel.classList.add("is-open");
+            } else {
+                panel.classList.remove("is-open");
+                requestAnimationFrame(() => panel.classList.add("is-open"));
+            }
+        }
+
+        function openChatUI(skipAnimation = false) {
+            state.chatActive = true;
+            persistSession();
+            showChatView(skipAnimation);
+            startPolling();
+            pollMessages();
+            setTimeout(() => {
+                $("chat-input")?.focus({ preventScroll: true });
+                scrollChatToBottom();
+            }, 400);
+        }
+
+        function scrollChatToBottom() {
+            const body = document.querySelector(".chat-body");
+            if (body) body.scrollTop = body.scrollHeight;
+        }
+
+        function closeChatUI() {
+            state.chatActive = false;
+            persistSession();
+            stopPolling();
+            showFichaView();
+        }
+
+        async function activateChat() {
+            if (!state.sessionId) {
+                showStatus("No se pudo iniciar el chat. Reescaneá el QR.", "error");
+                return;
+            }
+            openChatUI();
+        }
+
+        async function restoreChatFromStorage() {
+            const cached = loadPersistedSession();
+            if (!cached?.sessionId || !cached?.pet) return false;
+
+            const data = await validateSession(cached.sessionId);
+            if (!data) {
+                clearPersistedSession();
+                return false;
+            }
+
+            state.sessionId = cached.sessionId;
+            state.pet = cached.pet;
+            renderPetProfile(state.pet);
+            showPanel("panel-pet");
+
+            if (cached.chatActive) {
+                openChatUI(true);
+                state.lastMessageFingerprint = messagesFingerprint(data.messages ?? []);
+                renderChatMessages(data.messages ?? []);
+                showStatus(`Conversación restaurada · ${state.pet.name}`, "success");
+            } else {
+                showFichaView();
+                showStatus(`Identificamos a ${state.pet.name}. Revisá la ficha médica antes de acercarte.`, "info");
+            }
+            return true;
+        }
+
+        async function loadQrData() {
+            if (!QR_TOKEN) {
+                showPanel("panel-no-token");
+                return;
+            }
+
+            if (await restoreChatFromStorage()) return;
+
+            showPanel("panel-loading");
+
+            try {
+                const res = await fetch(`/api/qr/${encodeURIComponent(QR_TOKEN)}`);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showPanel("panel-no-token");
+                    const msg = data.error || data.message || "No se pudo leer la chapita QR";
+                    showStatus(
+                        res.status === 404
+                            ? "Este código QR no es válido. Verificá que escaneaste la chapita correcta."
+                            : msg,
+                        "error",
+                    );
+                    return;
+                }
+
+                const pet = sanitizePetPayload(data.pet);
+                if (!pet) {
+                    showStatus("Respuesta inválida del servidor", "error");
+                    showPanel("panel-no-token");
+                    return;
+                }
+
+                const cached = loadPersistedSession();
+                let sessionId = data.contact?.sessionId ?? null;
+
+                if (cached?.sessionId) {
+                    const valid = await validateSession(cached.sessionId);
+                    if (valid) sessionId = cached.sessionId;
+                }
+
+                state.pet = pet;
+                state.sessionId = sessionId;
+                persistSession();
+
+                renderPetProfile(pet);
+                showPanel("panel-pet");
+                showFichaView();
+                showStatus(`Identificamos a ${pet.name}. Revisá la ficha médica antes de acercarte.`, "info");
+            } catch (err) {
+                console.error(err);
+                showPanel("panel-no-token");
+                showStatus("Sin conexión al servidor. Revisá tu red.", "error");
+            }
+        }
+
+        async function sendChatMessage({ text = "", photoFile = null, locationReference = "" } = {}) {
+            if (!state.sessionId || !state.chatActive) {
+                showStatus("El chat no está activo.", "error");
+                return false;
+            }
+
+            const trimmed = text.trim();
+            if (!trimmed && !photoFile && !locationReference) return false;
+
+            const formData = new FormData();
+            if (trimmed) formData.append("text", trimmed);
+            if (locationReference) formData.append("locationReference", locationReference);
+            if (photoFile) formData.append("image", photoFile);
+
+            const res = await fetch(`/api/chat/sessions/${encodeURIComponent(state.sessionId)}/messages`, {
+                method: "POST",
+                body: formData,
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                showStatus(data.error || "Error al enviar mensaje", "error");
+                return false;
+            }
+
+            state.lastMessageFingerprint = "";
+            await pollMessages();
+            return true;
+        }
+
+        async function sendGpsAlert(latitude, longitude, accuracy) {
+            const btn = $("btn-gps");
+            btn.disabled = true;
+
+            try {
+                const payload = { qrToken: QR_TOKEN, latitude, longitude };
+                if (accuracy != null) payload.accuracy = accuracy;
+
+                const res = await fetch("/api/alerts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showStatus(data.error || "Error al enviar ubicación", "error");
+                    return;
+                }
+
+                await sendChatMessage({
+                    locationReference: `📍 Ubicación GPS compartida (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`,
+                });
+
+                btn.textContent = "✓";
+                btn.classList.add("btn-icon--sent");
+            } catch (err) {
+                console.error(err);
+                showStatus("Error de red al enviar GPS", "error");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function parseTokenFromQrText(text) {
+            const raw = String(text ?? "").trim();
+            if (!raw) return null;
+
+            try {
+                const url = new URL(raw, window.location.origin);
+                const fromQuery = url.searchParams.get("token")?.trim();
+                if (fromQuery) return fromQuery;
+            } catch {
+                /* texto plano o URL relativa */
+            }
+
+            if (/^[A-Za-z0-9_-]{8,}$/.test(raw)) return raw;
+            return null;
+        }
+
+        async function extractQrTokenFromImage(file) {
+            const blobUrl = URL.createObjectURL(file);
+            try {
+                const img = new Image();
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = blobUrl;
+                });
+
+                if ("BarcodeDetector" in window) {
+                    try {
+                        const detector = new BarcodeDetector({ formats: ["qr_code"] });
+                        const codes = await detector.detect(img);
+                        for (const code of codes) {
+                            const token = parseTokenFromQrText(code.rawValue);
+                            if (token) return token;
+                        }
+                    } catch {
+                        /* fallback a jsQR */
+                    }
+                }
+
+                if (typeof jsQR === "function") {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext("2d");
+                    if (!ctx) return null;
+                    ctx.drawImage(img, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const result = jsQR(imageData.data, imageData.width, imageData.height);
+                    if (result?.data) {
+                        const token = parseTokenFromQrText(result.data);
+                        if (token) return token;
+                    }
+                }
+
+                return null;
+            } finally {
+                URL.revokeObjectURL(blobUrl);
+            }
+        }
+
+        async function handleScanQrFile(file) {
+            if (!file) return;
+
+            showScanLoading("Analizando chapita…");
+
+            try {
+                const token = await extractQrTokenFromImage(file);
+                if (!token) {
+                    hideScanLoading();
+                    showScanError(
+                        "No pudimos leer la chapita",
+                        "Intentá nuevamente con mejor luz, sin reflejos y con el QR bien centrado en la foto.",
+                    );
+                    return;
+                }
+
+                setScanLoadingMessage("Verificando chapita…");
+
+                const res = await fetch(`/api/qr/${encodeURIComponent(token)}`);
+                if (!res.ok) {
+                    hideScanLoading();
+                    showScanError(
+                        "Código no válido",
+                        "La chapita no está registrada o el código expiró. Intentá nuevamente con mejor luz o pedile ayuda al dueño.",
+                    );
+                    return;
+                }
+
+                setScanLoadingMessage("¡Listo! Cargando ficha…");
+                window.location.href = `/?token=${encodeURIComponent(token)}`;
+            } catch (err) {
+                console.error(err);
+                hideScanLoading();
+                showScanError(
+                    "Error al procesar la foto",
+                    "Intentá nuevamente con mejor luz. Acercá un poco más la cámara a la chapita.",
+                );
+            }
+        }
+
+        $("btn-start-chat").addEventListener("click", activateChat);
+        $("btn-chat-back").addEventListener("click", closeChatUI);
+
+        $("btn-scan-tag")?.addEventListener("click", () => {
+            hideScanError();
+            $("input-scan-qr")?.click();
+        });
+
+        $("btn-scan-retry")?.addEventListener("click", () => {
+            hideScanError();
+            $("input-scan-qr")?.click();
+        });
+
+        $("input-scan-qr")?.addEventListener("change", (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            handleScanQrFile(file);
+        });
+
+        $("btn-gps").addEventListener("click", () => {
+            if (!state.chatActive) return;
+            if (!navigator.geolocation) {
+                showStatus("Tu navegador no soporta geolocalización", "error");
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => sendGpsAlert(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+                () => showStatus("Activá el permiso de ubicación", "error"),
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+            );
+        });
+
+        $("input-photo").addEventListener("change", (e) => {
+            const file = e.target.files?.[0];
+            state.pendingPhoto = file ?? null;
+            const thumb = $("photo-preview-thumb");
+            if (!file) {
+                thumb.classList.add("hidden");
+                thumb.src = "";
+                return;
+            }
+            thumb.src = URL.createObjectURL(file);
+            thumb.classList.remove("hidden");
+        });
+
+        $("chat-form").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const input = $("chat-input");
+            const btn = $("btn-send-chat");
+            const text = input.value.trim();
+            const photo = state.pendingPhoto;
+
+            if (!text && !photo) return;
+
+            btn.disabled = true;
+            const ok = await sendChatMessage({
+                text,
+                photoFile: photo,
+                locationReference: !text && photo ? "Evidencia visual enviada desde la calle" : "",
+            });
+
+            if (ok) {
+                input.value = "";
+                $("input-photo").value = "";
+                state.pendingPhoto = null;
+                $("photo-preview-thumb").classList.add("hidden");
+            }
+            btn.disabled = false;
+            input.focus();
+        });
+
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible" && state.chatActive) pollMessages();
+        });
+
+        window.addEventListener("beforeunload", stopPolling);
+
+        loadQrData();
+    </script>
+</body>
+</html>

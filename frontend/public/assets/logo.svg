@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 45" width="200" height="45" role="img" aria-label="Honey App">
+  <g transform="translate(2, 4)">
+    <path d="M18 3 L33 16 H3 Z" fill="#FFD700"/>
+    <rect x="6" y="16" width="24" height="19" rx="2" fill="#FFD700"/>
+    <rect x="14" y="24" width="8" height="11" rx="1" fill="#001f3f"/>
+    <circle cx="18" cy="11" r="2.6" fill="#001f3f"/>
+    <circle cx="12.5" cy="14" r="1.9" fill="#001f3f"/>
+    <circle cx="23.5" cy="14" r="1.9" fill="#001f3f"/>
+    <circle cx="14.5" cy="17.5" r="1.7" fill="#001f3f"/>
+    <circle cx="21.5" cy="17.5" r="1.7" fill="#001f3f"/>
+  </g>
+  <text x="46" y="30" fill="#FFD700" font-family="Segoe UI, system-ui, sans-serif" font-size="19" font-weight="800">Honey App</text>
+</svg>

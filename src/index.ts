@@ -31,6 +31,23 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/", (req, res) => {
+  if (req.query.token) {
+    sendPublicPage(res, "escaneo.html");
+    return;
+  }
+  const landingIndex = path.join(publicDir, "index.html");
+  if (existsSync(landingIndex)) {
+    res.sendFile(landingIndex);
+    return;
+  }
+  sendPublicPage(res, "escaneo.html");
+});
+
+app.get("/escaneo", (_req, res) => {
+  sendPublicPage(res, "escaneo.html");
+});
+
 app.get("/login", (_req, res) => {
   sendPublicPage(res, "login.html");
 });
@@ -44,9 +61,9 @@ app.get("/cuenta", (_req, res) => {
 });
 
 app.get(["/registro", "/registro/"], (_req, res) => {
-  const v2Index = path.join(publicDir, "registro-v2", "index.html");
-  if (existsSync(v2Index)) {
-    res.sendFile(v2Index);
+  const registroIndex = path.join(publicDir, "registro", "index.html");
+  if (existsSync(registroIndex)) {
+    res.sendFile(registroIndex);
     return;
   }
   sendPublicPage(res, "registro.html");
@@ -105,7 +122,8 @@ if (!process.env.VERCEL) {
   const PORT = Number(process.env.PORT) || 3000;
   app.listen(PORT, () => {
     console.log(`Servidor escuchando en http://localhost:${PORT}`);
-    console.log(`Vista móvil (vecino): http://localhost:${PORT}/`);
+    console.log(`Landing: http://localhost:${PORT}/`);
+    console.log(`Vista vecino (escaneo): http://localhost:${PORT}/escaneo`);
     console.log(`War Room dueño: http://localhost:${PORT}/dashboard`);
   });
 }
