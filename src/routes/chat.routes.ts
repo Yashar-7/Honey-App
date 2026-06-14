@@ -55,3 +55,19 @@ chatRouter.post(
     }
   }
 );
+
+chatRouter.post(
+  "/sessions/:sessionId/reply",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req as AuthenticatedRequest;
+      const sessionId = String(req.params.sessionId);
+      const input = replyMessageSchema.parse(req.body);
+      const result = await replySessionMessage(sessionId, userId, input);
+      res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
