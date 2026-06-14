@@ -10,7 +10,7 @@
 
     <div id="app-shell" class="app-shell">
         <header id="main-header" class="header">
-            <img src="/assets/honey-app-logo.png" alt="Honey App" class="logo" width="200" height="45" decoding="async">
+            <img src="/assets/logo.svg" alt="Honey App" class="logo" width="200" height="45" decoding="async">
             <p class="tagline">Vecino colaborador · Ayudá a que vuelva a casa</p>
         </header>
 
@@ -26,6 +26,14 @@
                 <h2 class="card__title">Escaneá la chapita</h2>
                 <p class="card__text">Este enlace necesita un código QR válido. Volvé a escanear la chapita de la mascota.</p>
                 <button type="button" id="btn-scan-tag" class="btn-primary btn-scan">📱 Escanear chapita</button>
+                <input id="input-scan-qr" type="file" accept="image/*" capture="environment" class="hidden" aria-hidden="true" tabindex="-1">
+
+                <div id="scan-error" class="scan-error hidden" role="alert">
+                    <div class="scan-error__icon" aria-hidden="true">📷</div>
+                    <h3 id="scan-error-title" class="scan-error__title">No pudimos leer la chapita</h3>
+                    <p id="scan-error-text" class="scan-error__text">Intentá nuevamente con mejor luz, sin reflejos y con el QR bien centrado.</p>
+                    <button type="button" id="btn-scan-retry" class="btn-primary btn-scan">📱 Intentar nuevamente</button>
+                </div>
             </div>
         </main>
 
@@ -103,6 +111,15 @@
         </form>
     </section>
 
+    <div id="scan-overlay" class="scan-overlay hidden" role="status" aria-live="polite" aria-busy="false">
+        <div class="scan-overlay__card">
+            <div class="spinner spinner--overlay" aria-hidden="true"></div>
+            <p id="scan-overlay-text" class="scan-overlay__text">Analizando chapita…</p>
+            <p class="scan-overlay__hint">Procesando la imagen, un momento por favor</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
     <script>
         const params = new URLSearchParams(window.location.search);
         const QR_TOKEN = params.get("token")?.trim() || "";
@@ -178,6 +195,42 @@
 
         function hideStatus() {
             $("statusBanner").classList.add("hidden");
+        }
+
+        function setScanLoadingMessage(message) {
+            const el = $("scan-overlay-text");
+            if (el) el.textContent = message;
+        }
+
+        function showScanLoading(message = "Analizando chapita…") {
+            hideScanError();
+            hideStatus();
+            setScanLoadingMessage(message);
+            const overlay = $("scan-overlay");
+            overlay?.classList.remove("hidden");
+            overlay?.setAttribute("aria-busy", "true");
+            $("btn-scan-tag")?.setAttribute("disabled", "true");
+            $("btn-scan-retry")?.setAttribute("disabled", "true");
+        }
+
+        function hideScanLoading() {
+            const overlay = $("scan-overlay");
+            overlay?.classList.add("hidden");
+            overlay?.setAttribute("aria-busy", "false");
+            $("btn-scan-tag")?.removeAttribute("disabled");
+            $("btn-scan-retry")?.removeAttribute("disabled");
+        }
+
+        function showScanError(title, message) {
+            const titleEl = $("scan-error-title");
+            const textEl = $("scan-error-text");
+            if (titleEl) titleEl.textContent = title;
+            if (textEl) textEl.textContent = message;
+            $("scan-error")?.classList.remove("hidden");
+        }
+
+        function hideScanError() {
+            $("scan-error")?.classList.add("hidden");
         }
 
         function escapeHtml(text) {
@@ -569,11 +622,123 @@
             }
         }
 
+        function parseTokenFromQrText(text) {
+            const raw = String(text ?? "").trim();
+            if (!raw) return null;
+
+            try {
+                const url = new URL(raw, window.location.origin);
+                const fromQuery = url.searchParams.get("token")?.trim();
+                if (fromQuery) return fromQuery;
+            } catch {
+                /* texto plano o URL relativa */
+            }
+
+            if (/^[A-Za-z0-9_-]{8,}$/.test(raw)) return raw;
+            return null;
+        }
+
+        async function extractQrTokenFromImage(file) {
+            const blobUrl = URL.createObjectURL(file);
+            try {
+                const img = new Image();
+                await new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                    img.src = blobUrl;
+                });
+
+                if ("BarcodeDetector" in window) {
+                    try {
+                        const detector = new BarcodeDetector({ formats: ["qr_code"] });
+                        const codes = await detector.detect(img);
+                        for (const code of codes) {
+                            const token = parseTokenFromQrText(code.rawValue);
+                            if (token) return token;
+                        }
+                    } catch {
+                        /* fallback a jsQR */
+                    }
+                }
+
+                if (typeof jsQR === "function") {
+                    const canvas = document.createElement("canvas");
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                    const ctx = canvas.getContext("2d");
+                    if (!ctx) return null;
+                    ctx.drawImage(img, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const result = jsQR(imageData.data, imageData.width, imageData.height);
+                    if (result?.data) {
+                        const token = parseTokenFromQrText(result.data);
+                        if (token) return token;
+                    }
+                }
+
+                return null;
+            } finally {
+                URL.revokeObjectURL(blobUrl);
+            }
+        }
+
+        async function handleScanQrFile(file) {
+            if (!file) return;
+
+            showScanLoading("Analizando chapita…");
+
+            try {
+                const token = await extractQrTokenFromImage(file);
+                if (!token) {
+                    hideScanLoading();
+                    showScanError(
+                        "No pudimos leer la chapita",
+                        "Intentá nuevamente con mejor luz, sin reflejos y con el QR bien centrado en la foto.",
+                    );
+                    return;
+                }
+
+                setScanLoadingMessage("Verificando chapita…");
+
+                const res = await fetch(`/api/qr/${encodeURIComponent(token)}`);
+                if (!res.ok) {
+                    hideScanLoading();
+                    showScanError(
+                        "Código no válido",
+                        "La chapita no está registrada o el código expiró. Intentá nuevamente con mejor luz o pedile ayuda al dueño.",
+                    );
+                    return;
+                }
+
+                setScanLoadingMessage("¡Listo! Cargando ficha…");
+                window.location.href = `/?token=${encodeURIComponent(token)}`;
+            } catch (err) {
+                console.error(err);
+                hideScanLoading();
+                showScanError(
+                    "Error al procesar la foto",
+                    "Intentá nuevamente con mejor luz. Acercá un poco más la cámara a la chapita.",
+                );
+            }
+        }
+
         $("btn-start-chat").addEventListener("click", activateChat);
         $("btn-chat-back").addEventListener("click", closeChatUI);
 
         $("btn-scan-tag")?.addEventListener("click", () => {
-            showStatus("Usá la cámara de tu celular sobre la chapita QR de la mascota.", "info");
+            hideScanError();
+            $("input-scan-qr")?.click();
+        });
+
+        $("btn-scan-retry")?.addEventListener("click", () => {
+            hideScanError();
+            $("input-scan-qr")?.click();
+        });
+
+        $("input-scan-qr")?.addEventListener("change", (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            handleScanQrFile(file);
         });
 
         $("btn-gps").addEventListener("click", () => {
