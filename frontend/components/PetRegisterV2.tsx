@@ -714,7 +714,7 @@ export function PetRegisterV2({
               </div>
 
               <p className="text-xs leading-relaxed text-white/55">
-                Tip Burro: Imprimí el QR y pegalo en su collar. Gratis.
+                Imprimí el QR y pegalo en su collar. Gratis.
               </p>
 
               {!showHealthForm ? (
