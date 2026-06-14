@@ -1,6 +1,7 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import { existsSync } from "fs";
 import path from "path";
 import { errorHandler } from "./middleware/errorHandler";
 import { alertsRouter } from "./routes/alerts.routes";
@@ -33,6 +34,11 @@ app.get("/login", (_req, res) => {
 });
 
 app.get("/registro", (_req, res) => {
+  const v2Index = path.join(publicDir, "registro-v2", "index.html");
+  if (existsSync(v2Index)) {
+    res.redirect("/registro-v2/");
+    return;
+  }
   res.redirect("/registro.html");
 });
 

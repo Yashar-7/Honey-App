@@ -8,6 +8,9 @@ mis_keys.txt
 
 # --- Dependencias ---
 node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
 
 # --- Build ---
 dist/

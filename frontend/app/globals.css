@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-mustard/20;
+  }
+
+  body {
+    @apply min-h-dvh bg-night text-white antialiased;
+  }
+
+  input,
+  button {
+    @apply touch-manipulation;
+  }
+}

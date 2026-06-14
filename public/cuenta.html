@@ -52,6 +52,7 @@
     <script>
         const STORAGE_KEY = "honey_owner_jwt";
         const EMAIL_KEY = "honey_owner_email";
+        const NAME_KEY = "honey_owner_name";
         const $ = (id) => document.getElementById(id);
 
         function showBanner(message, type = "error") {
@@ -85,6 +86,7 @@
 
                 sessionStorage.setItem(STORAGE_KEY, data.token);
                 sessionStorage.setItem(EMAIL_KEY, $("reg-email").value.trim());
+                if (data.user?.name) sessionStorage.setItem(NAME_KEY, data.user.name);
                 window.location.href = "/registro";
             } catch (err) {
                 showBanner(err.message || "No se pudo crear la cuenta", "error");
