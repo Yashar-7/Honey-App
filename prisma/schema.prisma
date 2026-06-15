@@ -14,10 +14,12 @@ model User {
   passwordHash      String             @map("password_hash")
   name              String
   phone             String?
+  reputationScore   Int                @default(0) @map("reputation_score")
   createdAt         DateTime           @default(now()) @map("created_at")
   updatedAt         DateTime           @updatedAt @map("updated_at")
   pets              Pet[]
   pushSubscriptions PushSubscription[]
+  rescuerProfiles   RescuerProfile[]
 
   @@map("users")
 }
@@ -49,8 +51,13 @@ model Pet {
   sex                 String?
   size                String?
   zipCode             String?          @map("zip_code")
+  lastVaccinationDate DateTime?        @map("last_vaccination_date") @db.Date
+  lastDewormingDate   DateTime?        @map("last_deworming_date") @db.Date
+  nextReminderDate    DateTime?        @map("next_reminder_date") @db.Date
+  vetClinicId         String?          @map("vet_clinic_id")
   contactSessions     ContactSession[]
   user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vetClinic           PetShop?         @relation(fields: [vetClinicId], references: [id], onDelete: SetNull)
   qrTokenHistory      QrTokenHistory[]
   scans               Scan[]
 
@@ -58,7 +65,25 @@ model Pet {
   @@index([qrToken])
   @@index([neighborhood])
   @@index([zipCode])
+  @@index([nextReminderDate])
+  @@index([vetClinicId])
   @@map("pets")
+}
+
+model PetShop {
+  id        String   @id @default(uuid())
+  name      String
+  type      String
+  address   String?
+  latitude  Float?
+  longitude Float?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  pets      Pet[]
+
+  @@index([isActive])
+  @@map("pet_shops")
 }
 
 model QrTokenHistory {
@@ -78,6 +103,7 @@ model ContactSession {
   qrToken            String    @map("qr_token")
   status             String    @default("open")
   visitorFingerprint String?   @map("visitor_fingerprint")
+  returnedAt         DateTime? @map("returned_at")
   expiresAt          DateTime  @map("expires_at")
   createdAt          DateTime  @default(now()) @map("created_at")
   pet                Pet       @relation(fields: [petId], references: [id], onDelete: Cascade)
@@ -86,6 +112,19 @@ model ContactSession {
   @@index([petId])
   @@index([petId, visitorFingerprint, status])
   @@map("contact_sessions")
+}
+
+model RescuerProfile {
+  id                 String   @id @default(uuid())
+  visitorFingerprint String   @unique @map("visitor_fingerprint")
+  reputationScore    Int      @default(0) @map("reputation_score")
+  userId             String?  @map("user_id")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  user               User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("rescuer_profiles")
 }
 
 model Message {
@@ -103,15 +142,16 @@ model Message {
 }
 
 model Scan {
-  id        String   @id @default(uuid())
-  petId     String   @map("pet_id")
-  latitude  Decimal  @db.Decimal(10, 8)
-  longitude Decimal  @db.Decimal(11, 8)
-  accuracy  Float?
-  scannedAt DateTime @default(now()) @map("scanned_at")
-  ipAddress String?  @map("ip_address")
-  userAgent String?  @map("user_agent")
-  pet       Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
+  id           String   @id @default(uuid())
+  petId        String   @map("pet_id")
+  latitude     Decimal  @db.Decimal(10, 8)
+  longitude    Decimal  @db.Decimal(11, 8)
+  accuracy     Float?
+  addressLabel String?  @map("address_label")
+  scannedAt    DateTime @default(now()) @map("scanned_at")
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  pet          Pet      @relation(fields: [petId], references: [id], onDelete: Cascade)
 
   @@index([petId, scannedAt(sort: Desc)])
   @@map("scans")

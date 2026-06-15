@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
 import {
@@ -6,6 +7,7 @@ import {
   ReplyMessageInput,
 } from "../schemas/message.schema";
 import { notifyOwnerOfPetEvent } from "./ownerNotify.service";
+import { awardReturnReputation, getRescuerReputation } from "./rescuer.service";
 
 const MESSAGE_SELECT = {
   id: true,
@@ -15,7 +17,49 @@ const MESSAGE_SELECT = {
   locationReference: true,
   imageUrl: true,
   createdAt: true,
-} as const;
+} as const satisfies Prisma.MessageSelect;
+
+const SESSION_WITH_PET_SELECT = {
+  id: true,
+  status: true,
+  expiresAt: true,
+  returnedAt: true,
+  visitorFingerprint: true,
+  pet: {
+    select: {
+      id: true,
+      name: true,
+      userId: true,
+      isActive: true,
+      isLost: true,
+      lastLat: true,
+      lastLng: true,
+      user: {
+        select: { name: true },
+      },
+    },
+  },
+} as const satisfies Prisma.ContactSessionSelect;
+
+const SESSION_RETURN_SELECT = {
+  id: true,
+  status: true,
+  expiresAt: true,
+  returnedAt: true,
+  visitorFingerprint: true,
+  pet: {
+    select: {
+      id: true,
+      name: true,
+      userId: true,
+      isLost: true,
+    },
+  },
+} as const satisfies Prisma.ContactSessionSelect;
+
+type SessionWithPet = Prisma.ContactSessionGetPayload<{
+  select: typeof SESSION_WITH_PET_SELECT;
+}>;
 
 function buildChatNotifyBody(message: {
   text: string | null;
@@ -29,28 +73,10 @@ function buildChatNotifyBody(message: {
   return parts.join(" · ") || "Nuevo mensaje de un vecino";
 }
 
-async function getReadableSession(sessionId: string) {
+async function getReadableSession(sessionId: string): Promise<SessionWithPet> {
   const session = await prisma.contactSession.findUnique({
     where: { id: sessionId },
-    select: {
-      id: true,
-      status: true,
-      expiresAt: true,
-      pet: {
-        select: {
-          id: true,
-          name: true,
-          userId: true,
-          isActive: true,
-          isLost: true,
-          lastLat: true,
-          lastLng: true,
-          user: {
-            select: { name: true },
-          },
-        },
-      },
-    },
+    select: SESSION_WITH_PET_SELECT,
   });
 
   if (!session) {
@@ -81,9 +107,16 @@ export async function getSessionMessages(sessionId: string) {
     select: MESSAGE_SELECT,
   });
 
+  const finderBadge = await getRescuerReputation(session.visitorFingerprint);
+
   return {
     sessionId,
     messages,
+    finder: {
+      reputationScore: finderBadge.score,
+      badgeLabel: finderBadge.label,
+      badgeLevel: finderBadge.level,
+    },
     pet: {
       id: session.pet.id,
       name: session.pet.name,
@@ -91,6 +124,7 @@ export async function getSessionMessages(sessionId: string) {
       lastLat: session.pet.lastLat,
       lastLng: session.pet.lastLng,
     },
+    returnedAt: session.returnedAt,
   };
 }
 
@@ -149,5 +183,60 @@ export async function replySessionMessage(
   return {
     message: "Respuesta enviada al vecino correctamente",
     data: message,
+  };
+}
+
+export async function markPetAsReturned(sessionId: string) {
+  const session = await prisma.contactSession.findUnique({
+    where: { id: sessionId },
+    select: SESSION_RETURN_SELECT,
+  });
+
+  if (!session) {
+    throw new AppError(404, "Sesión de contacto no encontrada");
+  }
+
+  if (session.returnedAt) {
+    const badge = await getRescuerReputation(session.visitorFingerprint);
+    return {
+      success: true,
+      alreadyReturned: true,
+      message: "Esta mascota ya fue marcada como devuelta",
+      finder: badge,
+    };
+  }
+
+  const now = new Date();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.contactSession.update({
+      where: { id: session.id },
+      data: {
+        returnedAt: now,
+        status: "closed",
+      },
+    });
+
+    await tx.pet.update({
+      where: { id: session.pet.id },
+      data: { isLost: false },
+    });
+  });
+
+  const finderBadge = await awardReturnReputation(session.visitorFingerprint);
+
+  void notifyOwnerOfPetEvent(session.pet.userId, {
+    type: "pet_returned",
+    petId: session.pet.id,
+    sessionId: session.id,
+    petName: session.pet.name,
+    body: `Un vecino marcó a ${session.pet.name} como devuelta/a 🎉`,
+  });
+
+  return {
+    success: true,
+    message: "¡Gracias por ayudar! Sumaste reputación de rescatista.",
+    finder: finderBadge,
+    returnedAt: now.toISOString(),
   };
 }

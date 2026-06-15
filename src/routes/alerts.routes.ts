@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { createLocationAlertSchema } from "../schemas/alert.schema";
+import { createLocationAlertSchema, neighborhoodHelpSchema } from "../schemas/alert.schema";
 import { getActiveLostPetAlerts } from "../services/alerts.service";
+import { requestNeighborhoodHelp } from "../services/neighborhoodHelp.service";
 import { registerScan } from "../services/qr.service";
 
 export const alertsRouter = Router();
@@ -31,6 +32,20 @@ alertsRouter.post("/", async (req, res, next) => {
       ...result,
       message: "Ubicación registrada en el sistema",
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/alerts/neighborhood-help
+ * Protocolo Ayuda Cercana: push a vecinos Honey en radio del escaneo.
+ */
+alertsRouter.post("/neighborhood-help", async (req, res, next) => {
+  try {
+    const body = neighborhoodHelpSchema.parse(req.body);
+    const result = await requestNeighborhoodHelp(body);
+    res.status(201).json(result);
   } catch (err) {
     next(err);
   }

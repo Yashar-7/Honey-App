@@ -481,8 +481,11 @@
             }
 
             for (const report of petReports) {
+                const locationLabel = report.locationReference
+                    ? report.locationReference.replace(/^📍\s*/, "")
+                    : `${report.latitude?.toFixed(5)}, ${report.longitude?.toFixed(5)}`;
                 const m = L.marker([report.latitude, report.longitude], { icon: pawPinIcon("yellow") })
-                    .bindPopup(`<strong style="color:#f8fafc">Avistaje · ${report.petName}</strong><br><small style="color:#94a3b8">${formatTime(report.createdAt)}</small>`);
+                    .bindPopup(`<strong style="color:#f8fafc">Avistaje · ${report.petName}</strong><br><small style="color:#94a3b8">${locationLabel}</small><br><small style="color:#64748b">${formatTime(report.createdAt)}</small>`);
                 markersLayer.addLayer(m);
                 bounds.push([report.latitude, report.longitude]);
             }
@@ -828,7 +831,7 @@
                 ? `<img src="${report.imageUrl}" alt="Evidencia" class="mt-2 rounded-xl max-h-40 w-full object-cover border border-slate-600">`
                 : "";
             const msg = report.text || report.locationReference || (isGps ? "Compartió su ubicación GPS" : "Envió un reporte");
-            const coords = report.latitude != null
+            const coords = report.latitude != null && !report.locationReference
                 ? `<p class="text-xs text-slate-400 mt-1 font-semibold">${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</p>`
                 : "";
 
@@ -1131,10 +1134,24 @@
             if (!activeChatSessionId) return;
             const data = await api(`/api/chat/sessions/${activeChatSessionId}/messages`);
             renderChatMessages(data.messages || []);
+            const finder = data.finder;
+            const petLabel = $("chat-modal-sub").dataset.petName || "Mascota";
+            if (finder?.badgeLevel && finder.badgeLevel !== "none") {
+                const icon =
+                    finder.badgeLevel === "hero"
+                        ? "🏅"
+                        : finder.badgeLevel === "rescuer"
+                          ? "⭐"
+                          : "🐾";
+                $("chat-modal-sub").textContent = `${icon} ${finder.badgeLabel} · ${petLabel}`;
+            } else {
+                $("chat-modal-sub").textContent = `Colaborador anónimo · ${petLabel}`;
+            }
         }
 
         function openSecureChat(sessionId, petName) {
             activeChatSessionId = sessionId;
+            $("chat-modal-sub").dataset.petName = petName || "Mascota";
             $("chat-modal-sub").textContent = `Colaborador anónimo · ${petName}`;
             $("chat-modal").classList.add("is-open");
             loadChatMessages();

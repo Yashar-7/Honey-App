@@ -3,7 +3,7 @@ import { requireAuth } from "../middleware/auth.middleware";
 import { uploadMessageImage } from "../middleware/upload.middleware";
 import { AppError } from "../middleware/errorHandler";
 import { parseCreateMessageInput, replyMessageSchema } from "../schemas/message.schema";
-import { getSessionMessages, replySessionMessage, sendSessionMessage } from "../services/chat.service";
+import { getSessionMessages, markPetAsReturned, replySessionMessage, sendSessionMessage } from "../services/chat.service";
 import { AuthenticatedRequest } from "../types/express";
 import { uploadToSupabase } from "../lib/supabase";
 import { buildUniqueImageFileName } from "../middleware/upload.middleware";
@@ -66,6 +66,19 @@ chatRouter.post(
       const input = replyMessageSchema.parse(req.body);
       const result = await replySessionMessage(sessionId, userId, input);
       res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+chatRouter.post(
+  "/sessions/:sessionId/mark-returned",
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const sessionId = String(req.params.sessionId);
+      const result = await markPetAsReturned(sessionId);
+      res.json(result);
     } catch (err) {
       next(err);
     }

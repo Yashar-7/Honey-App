@@ -12,6 +12,7 @@ import {
   PawPrint,
   QrCode,
   ShieldCheck,
+  Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +29,7 @@ import {
   deriveOwnerNameFromEmail,
   persistOwnerSession,
   type RegisterPetResponse,
+  type PetShopOption,
   type Species,
   triggerHaptic,
 } from "@/lib/utils";
@@ -90,6 +92,9 @@ export function PetRegisterV2({
   const [healthSaving, setHealthSaving] = useState(false);
   const [healthSaved, setHealthSaved] = useState(false);
   const [healthError, setHealthError] = useState<string | null>(null);
+  const [petShops, setPetShops] = useState<PetShopOption[]>([]);
+  const [vetClinicId, setVetClinicId] = useState("");
+  const [lastVaccinationDate, setLastVaccinationDate] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoPreviewRef = useRef<string | null>(null);
@@ -114,6 +119,29 @@ export function PetRegisterV2({
     }
     return preset.value;
   }, [colorId, customColor]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPetShops() {
+      try {
+        const res = await fetch("/api/pet-shops");
+        const data = (await res.json().catch(() => ({}))) as {
+          petShops?: PetShopOption[];
+        };
+        if (!cancelled && Array.isArray(data.petShops)) {
+          setPetShops(data.petShops);
+        }
+      } catch {
+        /* opcional: el registro sigue sin aliados cargados */
+      }
+    }
+
+    loadPetShops();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const update = () =>
@@ -233,6 +261,8 @@ export function PetRegisterV2({
       buildFinderMessage(name.trim(), resolvedOwnerName),
     );
     formData.append("photo", photoFile);
+    if (vetClinicId) formData.append("vetClinicId", vetClinicId);
+    if (lastVaccinationDate) formData.append("lastVaccinationDate", lastVaccinationDate);
 
       const res = await fetch("/api/pets", {
         method: "POST",
@@ -336,6 +366,8 @@ export function PetRegisterV2({
     setHealthObservations("");
     setHealthSaved(false);
     setHealthError(null);
+    setVetClinicId("");
+    setLastVaccinationDate("");
     goToStep(1, -1);
   };
 
@@ -410,6 +442,13 @@ export function PetRegisterV2({
               transition={{ type: "spring", stiffness: 320, damping: 32 }}
               className="space-y-4"
             >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  advanceFromStep1();
+                }}
+                className="space-y-4"
+              >
               <label
                 htmlFor="pet-photo-input"
                 className="relative flex h-[40vh] min-h-[220px] max-h-[320px] cursor-pointer flex-col items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-mustard/40 bg-night/60 transition hover:border-mustard/70 hover:bg-night/80"
@@ -494,11 +533,10 @@ export function PetRegisterV2({
 
               <div className="relative">
                 <Button
-                  type="button"
+                  type="submit"
                   size="lg"
                   className="w-full"
                   disabled={!step1Ready}
-                  onClick={advanceFromStep1}
                   aria-describedby={!step1Ready ? "step1-hint" : undefined}
                 >
                   Siguiente
@@ -515,6 +553,7 @@ export function PetRegisterV2({
                   </p>
                 )}
               </div>
+              </form>
             </motion.div>
           )}
 
@@ -529,6 +568,13 @@ export function PetRegisterV2({
               transition={{ type: "spring", stiffness: 320, damping: 32 }}
               className="space-y-5"
             >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  advanceFromStep2();
+                }}
+                className="space-y-5"
+              >
               <div>
                 <p className="mb-3 text-sm font-semibold text-white/80">
                   ¿Qué es {name.trim()}?
@@ -626,6 +672,54 @@ export function PetRegisterV2({
                 )}
               </div>
 
+              <div className="rounded-2xl border border-mustard/20 bg-night/40 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4 text-mustard" aria-hidden />
+                  <p className="text-sm font-semibold text-white/85">
+                    Fidelización veterinaria{" "}
+                    <span className="font-normal text-white/45">(opcional)</span>
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label htmlFor="vet-clinic" className="mb-1.5 block text-xs text-white/60">
+                      Veterinaria / Pet Shop
+                    </label>
+                    <select
+                      id="vet-clinic"
+                      value={vetClinicId}
+                      onChange={(e) => setVetClinicId(e.target.value)}
+                      className="h-12 w-full rounded-xl border border-mustard/25 bg-[#0A0A0A] px-3 text-sm text-white focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                    >
+                      <option value="">Sin seleccionar</option>
+                      {petShops.map((shop) => (
+                        <option key={shop.id} value={shop.id}>
+                          {shop.type === "veterinary" ? "🏥" : "🛒"} {shop.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="last-vaccination-date"
+                      className="mb-1.5 block text-xs text-white/60"
+                    >
+                      Fecha de última vacuna
+                    </label>
+                    <input
+                      id="last-vaccination-date"
+                      type="date"
+                      value={lastVaccinationDate}
+                      max={new Date().toISOString().slice(0, 10)}
+                      onChange={(e) => setLastVaccinationDate(e.target.value)}
+                      className="h-12 w-full rounded-xl border border-mustard/25 bg-[#0A0A0A] px-3 text-sm text-white focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3">
                 <Button
                   type="button"
@@ -636,16 +730,16 @@ export function PetRegisterV2({
                   ← Atrás
                 </Button>
                 <Button
-                  type="button"
+                  type="submit"
                   size="lg"
                   className="flex-[2]"
                   disabled={!step2Ready}
-                  onClick={advanceFromStep2}
                 >
                   Siguiente
                   <ArrowRight className="h-5 w-5" aria-hidden />
                 </Button>
               </div>
+              </form>
             </motion.div>
           )}
 
@@ -660,6 +754,13 @@ export function PetRegisterV2({
               transition={{ type: "spring", stiffness: 320, damping: 32 }}
               className="space-y-4"
             >
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void submitPet();
+                }}
+                className="space-y-4"
+              >
               <div className="flex items-start gap-3 rounded-2xl border border-mustard/25 bg-night/50 p-4">
                 {photoPreview && (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -748,11 +849,10 @@ export function PetRegisterV2({
               )}
 
               <Button
-                type="button"
+                type="submit"
                 size="lg"
                 className="w-full shadow-mustard"
                 disabled={submitting || !accountReady}
-                onClick={submitPet}
               >
                 <QrCode className="h-5 w-5" aria-hidden />
                 {submitting
@@ -772,6 +872,7 @@ export function PetRegisterV2({
               >
                 ← Volver a editar
               </button>
+              </form>
             </motion.div>
           )}
 
@@ -794,6 +895,16 @@ export function PetRegisterV2({
               <h2 className="text-xl font-extrabold text-mustard">
                 {name.trim()} ahora está a salvo ✅
               </h2>
+
+              {result.loyaltyReminder && (
+                <p className="rounded-xl border border-mustard/30 bg-mustard/10 px-4 py-3 text-sm leading-relaxed text-white/85">
+                  Honey App te avisará automáticamente cuando toque la próxima vacuna
+                  {result.loyaltyReminder.vetClinicName
+                    ? ` en ${result.loyaltyReminder.vetClinicName}`
+                    : " en tu veterinaria seleccionada"}
+                  .
+                </p>
+              )}
 
               <div className="mx-auto flex items-center justify-center rounded-2xl bg-white p-4 shadow-lg">
                 {qrPngUrl ? (
@@ -860,6 +971,13 @@ export function PetRegisterV2({
                     Esta información solo será visible si la mascota se pierde,
                     para ayudar a quien la encuentre a cuidarla mejor.
                   </p>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void saveHealthObservations();
+                    }}
+                    className="space-y-3"
+                  >
                   <label htmlFor="health-observations" className="sr-only">
                     Observaciones de salud de {name.trim()}
                   </label>
@@ -886,14 +1004,14 @@ export function PetRegisterV2({
                     </p>
                   )}
                   <Button
-                    type="button"
+                    type="submit"
                     variant="secondary"
                     className="mt-3 w-full"
                     disabled={healthSaving}
-                    onClick={saveHealthObservations}
                   >
                     {healthSaving ? "Guardando…" : "Guardar observaciones"}
                   </Button>
+                  </form>
                 </motion.div>
               )}
 

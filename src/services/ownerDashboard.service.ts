@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import {
   getSafePointsNear,
@@ -5,6 +6,21 @@ import {
 } from "../lib/safePoints";
 
 export type { SafePoint };
+
+const WAR_ROOM_SCAN_SELECT = {
+  id: true,
+  petId: true,
+  latitude: true,
+  longitude: true,
+  accuracy: true,
+  addressLabel: true,
+  scannedAt: true,
+  pet: { select: { name: true } },
+} as const satisfies Prisma.ScanSelect;
+
+type WarRoomScan = Prisma.ScanGetPayload<{
+  select: typeof WAR_ROOM_SCAN_SELECT;
+}>;
 
 export type WarRoomReport = {
   id: string;
@@ -25,15 +41,10 @@ function toIso(date: Date): string {
   return date.toISOString();
 }
 
-function scanToReport(scan: {
-  id: string;
-  petId: string;
-  latitude: { toNumber(): number };
-  longitude: { toNumber(): number };
-  accuracy: number | null;
-  scannedAt: Date;
-  pet: { name: string };
-}): WarRoomReport {
+function scanToReport(scan: WarRoomScan): WarRoomReport {
+  const address =
+    scan.addressLabel?.trim() || "Zona: Mar del Plata Centro";
+
   return {
     id: `scan-${scan.id}`,
     type: "gps",
@@ -43,7 +54,7 @@ function scanToReport(scan: {
     longitude: scan.longitude.toNumber(),
     accuracy: scan.accuracy,
     text: null,
-    locationReference: null,
+    locationReference: `📍 ${address}`,
     imageUrl: null,
     sessionId: null,
     createdAt: toIso(scan.scannedAt),
@@ -186,15 +197,7 @@ export async function getOwnerWarRoom(userId: string, since?: Date) {
       },
       take: since ? 100 : 50,
       orderBy: { scannedAt: "desc" },
-      select: {
-        id: true,
-        petId: true,
-        latitude: true,
-        longitude: true,
-        accuracy: true,
-        scannedAt: true,
-        pet: { select: { name: true } },
-      },
+      select: WAR_ROOM_SCAN_SELECT,
     }),
     prisma.message.findMany({
       where: {

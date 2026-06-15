@@ -15,6 +15,44 @@ const DEMO_PASSWORD = "demo1234";
 /** Cuentas reales: el seed no sobrescribe su contraseña al hacer upsert. */
 const REAL_USER_EMAILS = new Set(["romarmarquez777@gmail.com"]);
 
+const DEMO_PET_SHOPS = [
+  {
+    id: "a1111111-1111-4111-8111-111111111101",
+    name: "Veterinaria Atlántica",
+    type: "veterinary",
+    latitude: -38.0022,
+    longitude: -57.5485,
+  },
+  {
+    id: "a1111111-1111-4111-8111-111111111102",
+    name: "Clínica Vet del Sur",
+    type: "veterinary",
+    latitude: -38.0185,
+    longitude: -57.532,
+  },
+  {
+    id: "a1111111-1111-4111-8111-111111111103",
+    name: "Pet Shop Max",
+    type: "petshop",
+    latitude: -38.008,
+    longitude: -57.561,
+  },
+  {
+    id: "a1111111-1111-4111-8111-111111111104",
+    name: "Huellas & Co.",
+    type: "petshop",
+    latitude: -37.995,
+    longitude: -57.539,
+  },
+  {
+    id: "a1111111-1111-4111-8111-111111111105",
+    name: "Veterinaria Centro MDP",
+    type: "veterinary",
+    latitude: -37.9995,
+    longitude: -57.5565,
+  },
+] as const;
+
 const TEST_USERS = [
   {
     email: "dueno@ejemplo.com",
@@ -95,6 +133,34 @@ const DEMO_PETS = [
     lng: MAR_DEL_PLATA.puntaMogotes.lng,
   },
 ] as const;
+
+async function seedPetShops(prisma: PrismaClient) {
+  const shops = [];
+
+  for (const shop of DEMO_PET_SHOPS) {
+    const saved = await prisma.petShop.upsert({
+      where: { id: shop.id },
+      update: {
+        name: shop.name,
+        type: shop.type,
+        latitude: shop.latitude,
+        longitude: shop.longitude,
+        isActive: true,
+      },
+      create: {
+        id: shop.id,
+        name: shop.name,
+        type: shop.type,
+        latitude: shop.latitude,
+        longitude: shop.longitude,
+        isActive: true,
+      },
+    });
+    shops.push(saved);
+  }
+
+  return shops;
+}
 
 async function seedDemoPets(prisma: PrismaClient) {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
@@ -207,8 +273,10 @@ function printSeedSummary(
 const prisma = new PrismaClient();
 
 async function main() {
+  const petShops = await seedPetShops(prisma);
   const { users, pets } = await seedDemoPets(prisma);
   printSeedSummary(users, pets);
+  console.log(`\nPet shops aliados: ${petShops.length}`);
 }
 
 main()

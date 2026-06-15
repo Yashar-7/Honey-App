@@ -76,6 +76,13 @@
             <button type="button" id="btn-start-chat" class="btn-primary fade-up fade-up-delay-2">
                 💬 Iniciar Chat Seguro con el Dueño
             </button>
+
+            <form id="neighborhood-help-form" class="neighborhood-help-form fade-up fade-up-delay-2">
+                <button type="submit" id="btn-neighborhood-help" class="btn-neighborhood-help">
+                    🆘 Solicitar ayuda vecinal
+                </button>
+                <p class="neighborhood-help-form__hint">Activa el protocolo Ayuda Cercana: avisa a vecinos Honey en un radio de 2 km.</p>
+            </form>
         </main>
 
         <footer id="main-footer" class="footer">
@@ -93,6 +100,7 @@
             </div>
             <p class="chat-header__brand">Honey App</p>
             <p class="chat-header__hint">Tu identidad y número están protegidos · sin teléfono ni WhatsApp</p>
+            <p id="finder-rescuer-badge" class="finder-rescuer-badge hidden" aria-live="polite"></p>
             <p id="chat-pet-label" class="chat-pet-label"></p>
         </header>
 
@@ -122,6 +130,12 @@
                         <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/>
                         <path d="m21.854 2.147-10.94 10.939"/>
                     </svg>
+                </button>
+            </form>
+
+            <form id="mark-returned-form" class="mark-returned-form">
+                <button type="submit" id="btn-mark-returned" class="btn-mark-returned">
+                    ✅ Marcar como devuelto/a
                 </button>
             </form>
         </div>
@@ -154,6 +168,8 @@
             pollTimer: null,
             lastMessageFingerprint: "",
             pendingPhoto: null,
+            finderBadge: null,
+            returnedAt: null,
         };
 
         const $ = (id) => document.getElementById(id);
@@ -334,6 +350,27 @@
             renderMedicalRecord(pet);
         }
 
+        function updateFinderBadge(finder) {
+            const el = $("finder-rescuer-badge");
+            if (!el) return;
+
+            if (!finder || !finder.badgeLevel || finder.badgeLevel === "none") {
+                el.classList.add("hidden");
+                el.textContent = "";
+                return;
+            }
+
+            const icon =
+                finder.badgeLevel === "hero"
+                    ? "🏅"
+                    : finder.badgeLevel === "rescuer"
+                      ? "⭐"
+                      : "🐾";
+
+            el.textContent = `${icon} ${finder.badgeLabel} · ${finder.reputationScore} pts`;
+            el.classList.remove("hidden");
+        }
+
         function renderChatMessages(messages) {
             const box = $("chat-messages");
             const hint = $("chat-empty-hint");
@@ -370,11 +407,20 @@
             });
         }
 
-        async function fetchMessages() {
+        async function fetchChatSession() {
             if (!state.sessionId) return null;
             const res = await fetch(`/api/chat/sessions/${encodeURIComponent(state.sessionId)}/messages`);
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+            return data;
+        }
+
+        async function fetchMessages() {
+            const data = await fetchChatSession();
+            if (!data) return null;
+            state.finderBadge = data.finder ?? null;
+            state.returnedAt = data.returnedAt ?? null;
+            updateFinderBadge(state.finderBadge);
             return data.messages ?? [];
         }
 
@@ -515,6 +561,8 @@
 
             state.sessionId = cached.sessionId;
             state.pet = cached.pet;
+            state.finderBadge = data.finder ?? null;
+            updateFinderBadge(state.finderBadge);
             renderPetProfile(state.pet);
             showPanel("panel-pet");
 
@@ -636,8 +684,13 @@
                     return;
                 }
 
+                const addressLabel =
+                    data.addressLabel ||
+                    data.scan?.addressLabel ||
+                    "Zona: Mar del Plata Centro";
+
                 await sendChatMessage({
-                    locationReference: `📍 Ubicación GPS compartida (${latitude.toFixed(5)}, ${longitude.toFixed(5)})`,
+                    locationReference: `📍 ${addressLabel}`,
                 });
 
                 btn.textContent = "✓";
@@ -750,7 +803,94 @@
             }
         }
 
+        async function sendNeighborhoodHelp() {
+            if (!QR_TOKEN) {
+                showStatus("Necesitás escanear una chapita válida primero", "error");
+                return;
+            }
+
+            const btn = $("btn-neighborhood-help");
+            btn.disabled = true;
+
+            const send = async (latitude, longitude, accuracy) => {
+                try {
+                    const res = await fetch("/api/alerts/neighborhood-help", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            qrToken: QR_TOKEN,
+                            latitude,
+                            longitude,
+                            radiusKm: 2,
+                            accuracy,
+                        }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+                    const locationHint = data.addressLabel
+                        ? ` en ${data.addressLabel}`
+                        : "";
+                    showStatus(
+                        (data.message || "Ayuda vecinal activada") + locationHint,
+                        "success",
+                    );
+                } catch (err) {
+                    showStatus(err.message || "No se pudo activar la ayuda vecinal", "error");
+                } finally {
+                    btn.disabled = false;
+                }
+            };
+
+            if (!navigator.geolocation) {
+                showStatus("Activá la ubicación para solicitar ayuda cercana", "error");
+                btn.disabled = false;
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (pos) => send(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+                () => {
+                    showStatus("Necesitamos tu ubicación para avisar a vecinos cercanos", "error");
+                    btn.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 },
+            );
+        }
+
+        async function markPetReturned(e) {
+            if (e) e.preventDefault();
+            if (!state.sessionId) return;
+
+            const btn = $("btn-mark-returned");
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(
+                    `/api/chat/sessions/${encodeURIComponent(state.sessionId)}/mark-returned`,
+                    { method: "POST" },
+                );
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || data.message || `Error ${res.status}`);
+
+                state.finderBadge = data.finder ?? state.finderBadge;
+                state.returnedAt = data.returnedAt ?? new Date().toISOString();
+                updateFinderBadge(state.finderBadge);
+                showStatus(data.message || "¡Gracias por ayudar!", "success");
+            } catch (err) {
+                showStatus(err.message || "No se pudo registrar la devolución", "error");
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         $("btn-start-chat").addEventListener("click", activateChat);
+        $("neighborhood-help-form")?.addEventListener("submit", (e) => {
+            e.preventDefault();
+            sendNeighborhoodHelp();
+        });
+
+        $("mark-returned-form")?.addEventListener("submit", markPetReturned);
+
         $("btn-chat-back").addEventListener("click", closeChatUI);
 
         $("btn-scan-tag")?.addEventListener("click", () => {

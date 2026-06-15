@@ -4,6 +4,16 @@ const speciesValues = ["Perro", "Gato", "Otro"] as const;
 const sexValues = ["Macho", "Hembra", "Desconocido"] as const;
 const sizeValues = ["Pequeño", "Mediano", "Grande"] as const;
 
+const optionalIsoDate = z
+  .string()
+  .trim()
+  .optional()
+  .transform((value) => (value ? value : undefined))
+  .refine((value) => !value || !Number.isNaN(Date.parse(value)), {
+    message: "Fecha inválida",
+  })
+  .transform((value) => (value ? new Date(value) : undefined));
+
 export const createPetSchema = z.object({
   name: z.string().trim().min(1, "El nombre es obligatorio").max(80),
   species: z.enum(speciesValues, {
@@ -22,14 +32,23 @@ export const createPetSchema = z.object({
   zipCode: z.string().trim().max(12).optional(),
   neighborhood: z.string().trim().max(120).optional(),
   characteristics: z.string().trim().max(500).optional(),
-  
+
   // --- CAMPOS DE FICHA MÉDICA AVANZADA ---
-  medicalConditions: z.string().trim().max(500).optional(), // Ej: "Sufre de convulsiones"
-  medications: z.string().trim().max(500).optional(),       // Ej: "Toma fenobarbital cada 12hs"
-  allergies: z.string().trim().max(300).optional(),         // Ej: "Alérgico al pollo"
-  behavioralNotes: z.string().trim().max(500).optional(),   // Ej: "Muy asustadizo con ruidos fuertes"
-  
-  // Mensaje público que lee el vecino (sin incluir datos privados de contacto)
+  medicalConditions: z.string().trim().max(500).optional(),
+  medications: z.string().trim().max(500).optional(),
+  allergies: z.string().trim().max(300).optional(),
+  behavioralNotes: z.string().trim().max(500).optional(),
+
+  // --- FIDELIZACIÓN VETERINARIA ---
+  vetClinicId: z
+    .string()
+    .trim()
+    .uuid("Veterinaria inválida")
+    .optional()
+    .or(z.literal("").transform(() => undefined)),
+  lastVaccinationDate: optionalIsoDate,
+  lastDewormingDate: optionalIsoDate,
+
   finderMessage: z
     .string()
     .trim()

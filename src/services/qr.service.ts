@@ -1,4 +1,8 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
+import {
+  reverseGeocodeAddress,
+} from "../lib/geocoding";
 import {
   buildVisitorFingerprint,
   getContactSessionExpiry,
@@ -12,6 +16,15 @@ export type QrVisitorMeta = {
   ipAddress?: string;
   userAgent?: string;
 };
+
+const SCAN_CREATE_SELECT = {
+  id: true,
+  latitude: true,
+  longitude: true,
+  accuracy: true,
+  addressLabel: true,
+  scannedAt: true,
+} as const satisfies Prisma.ScanSelect;
 
 const PUBLIC_PET_SELECT = {
   id: true,
@@ -163,6 +176,11 @@ export async function registerScan(
     throw new AppError(404, "Token QR no encontrado");
   }
 
+  const { addressLabel } = await reverseGeocodeAddress(
+    input.latitude,
+    input.longitude,
+  );
+
   const scan = await prisma.$transaction(async (tx) => {
     const createdScan = await tx.scan.create({
       data: {
@@ -170,16 +188,11 @@ export async function registerScan(
         latitude: input.latitude,
         longitude: input.longitude,
         accuracy: input.accuracy,
+        addressLabel,
         ipAddress: meta.ipAddress,
         userAgent: meta.userAgent,
       },
-      select: {
-        id: true,
-        latitude: true,
-        longitude: true,
-        accuracy: true,
-        scannedAt: true,
-      },
+      select: SCAN_CREATE_SELECT,
     });
 
     await tx.pet.update({
@@ -193,20 +206,26 @@ export async function registerScan(
     return createdScan;
   });
 
+  console.log(
+    `[scan] GPS registrado · ${pet.name} · ${addressLabel} (${input.latitude.toFixed(5)}, ${input.longitude.toFixed(5)})`,
+  );
+
   void notifyOwnerOfPetEvent(pet.userId, {
     type: "gps_scan",
     petId: pet.id,
     petName: pet.name,
-    body: `Nuevo reporte GPS: ${input.latitude.toFixed(5)}, ${input.longitude.toFixed(5)}`,
+    body: `Nuevo reporte cerca de ${addressLabel}`,
   });
 
   return {
     message: "Escaneo registrado correctamente",
     petName: pet.name,
+    addressLabel,
     scan,
     petLocation: {
       lastLat: input.latitude,
       lastLng: input.longitude,
+      addressLabel,
     },
   };
 }

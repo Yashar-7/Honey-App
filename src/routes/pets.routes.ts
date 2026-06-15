@@ -11,9 +11,31 @@ import {
 } from "../middleware/upload.middleware";
 import { createPetSchema, updateHealthObservationsSchema } from "../schemas/pet.schema";
 import { createPet, rotatePetQrToken, updatePetHealthObservations } from "../services/pet.service";
+import { processVaccinationReminders } from "../services/vaccinationReminder.service";
 import { AuthenticatedRequest } from "../types/express";
 
 export const petsRouter = Router();
+
+/**
+ * POST /api/pets/reminders/process
+ * Dispara recordatorios de vacuna (30 días). Protegido con CRON_SECRET si está configurado.
+ */
+petsRouter.post("/reminders/process", async (req, res, next) => {
+  try {
+    const expected = process.env.CRON_SECRET?.trim();
+    if (expected) {
+      const got = req.get("x-cron-secret");
+      if (got !== expected) {
+        throw new AppError(401, "No autorizado");
+      }
+    }
+
+    const result = await processVaccinationReminders(30);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
 
 /**
  * POST /api/pets

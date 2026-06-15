@@ -22,9 +22,13 @@ export async function notifyOwnerOfPetEvent(
     title:
       event.type === "gps_scan"
         ? `📍 ${event.petName}`
+        : event.type === "neighborhood_help_owner"
+          ? `🆘 ${event.petName}`
         : event.type === "qr_open"
           ? `🔔 ${event.petName}`
-          : `💬 ${event.petName}`,
+          : event.type === "pet_returned"
+            ? `🎉 ${event.petName}`
+            : `💬 ${event.petName}`,
     body: event.body,
     url: "/dashboard",
     tag: `${event.type}:${event.petId}`,

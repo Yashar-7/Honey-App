@@ -50,4 +50,15 @@ export type RegisterPetResponse = {
   qrSvgUrl?: string;
   qrSvgDownloadUrl?: string;
   pet?: { id?: string; name?: string };
+  loyaltyReminder?: {
+    nextReminderDate: string;
+    vetClinicName: string | null;
+  } | null;
+};
+
+export type PetShopOption = {
+  id: string;
+  name: string;
+  type: string;
+  address?: string | null;
 };

@@ -6,13 +6,15 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "prisma generate && tsc",
-    "vercel-build": "npm run build:frontend && prisma generate && tsc",
+    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "vercel-build": "npm run build:frontend && prisma generate && tsc -p tsconfig.build.json",
+    "prisma:sync": "node scripts/prisma-sync.mjs",
     "build:frontend": "npm install --prefix frontend && npm run build --prefix frontend",
     "start": "node dist/index.js",
     "dev": "tsx watch src/index.ts",
     "postinstall": "prisma generate",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "prisma generate && tsc --noEmit",
+    "typesheck": "npm run typecheck",
     "seed": "tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",

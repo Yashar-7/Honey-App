@@ -1175,3 +1175,85 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Ecosistema salud · Ayuda Cercana · Rescatista */
+.neighborhood-help-form {
+  margin-top: 0.75rem;
+  width: 100%;
+}
+
+.btn-neighborhood-help {
+  display: flex;
+  width: 100%;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 2px solid #ffc107;
+  border-radius: 999px;
+  background: rgba(255, 193, 7, 0.08);
+  color: #ffc107;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.btn-neighborhood-help:hover {
+  background: rgba(255, 193, 7, 0.16);
+}
+
+.btn-neighborhood-help:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.neighborhood-help-form__hint {
+  margin: 0.5rem 0 0;
+  text-align: center;
+  font-size: 0.6875rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.finder-rescuer-badge {
+  margin: 0.35rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 193, 7, 0.45);
+  background: rgba(10, 10, 10, 0.65);
+  padding: 0.25rem 0.65rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #ffc107;
+}
+
+.mark-returned-form {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(255, 193, 7, 0.15);
+}
+
+.btn-mark-returned {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  border-radius: 0.85rem;
+  background: #0a0a0a;
+  color: #e0e0e0;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-mark-returned:hover {
+  border-color: #ffc107;
+  color: #ffc107;
+}
+
+.btn-mark-returned:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

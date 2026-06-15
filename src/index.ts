@@ -9,6 +9,7 @@ import { chatRouter } from "./routes/chat.routes";
 import { authRouter } from "./routes/auth.routes";
 import { ownerRouter } from "./routes/owner.routes";
 import { petsRouter } from "./routes/pets.routes";
+import { petShopsRouter } from "./routes/petShops.routes";
 import { qrRouter } from "./routes/qr.routes";
 
 const app = express();
@@ -99,6 +100,7 @@ app.use((req, _res, next) => {
     reqPath.startsWith("/chat") ||
     reqPath.startsWith("/auth") ||
     reqPath.startsWith("/pets") ||
+    reqPath.startsWith("/pet-shops") ||
     reqPath.startsWith("/owner");
 
   if (needsApiPrefix && !reqPath.startsWith("/api/")) {
@@ -109,6 +111,7 @@ app.use((req, _res, next) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/pets", petsRouter);
+app.use("/api/pet-shops", petShopsRouter);
 app.use("/api/qr", qrRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/alerts", alertsRouter);

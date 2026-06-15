@@ -6,6 +6,97 @@ import { generateQrToken } from "../lib/tokens";
 import { AppError } from "../middleware/errorHandler";
 import type { CreatePetInput } from "../schemas/pet.schema";
 
+const VACCINATION_REMINDER_MONTHS = 12;
+const DEWORMING_REMINDER_MONTHS = 3;
+const REMINDER_WINDOW_DAYS = 30;
+
+/** Calcula la próxima fecha de recordatorio según vacuna y desparasitación. */
+export function computeNextReminderDate(
+  lastVaccinationDate?: Date | null,
+  lastDewormingDate?: Date | null,
+): Date | null {
+  const candidates: Date[] = [];
+
+  if (lastVaccinationDate) {
+    const next = new Date(lastVaccinationDate);
+    next.setMonth(next.getMonth() + VACCINATION_REMINDER_MONTHS);
+    candidates.push(next);
+  }
+
+  if (lastDewormingDate) {
+    const next = new Date(lastDewormingDate);
+    next.setMonth(next.getMonth() + DEWORMING_REMINDER_MONTHS);
+    candidates.push(next);
+  }
+
+  if (candidates.length === 0) return null;
+  return candidates.sort((a, b) => a.getTime() - b.getTime())[0];
+}
+
+const VACCINATION_REMINDER_SELECT = {
+  id: true,
+  name: true,
+  species: true,
+  nextReminderDate: true,
+  lastVaccinationDate: true,
+  lastDewormingDate: true,
+  user: {
+    select: {
+      id: true,
+      email: true,
+      name: true,
+    },
+  },
+  vetClinic: {
+    select: {
+      id: true,
+      name: true,
+      type: true,
+    },
+  },
+} as const satisfies Prisma.PetSelect;
+
+export type VaccinationReminderPet = Prisma.PetGetPayload<{
+  select: typeof VACCINATION_REMINDER_SELECT;
+}>;
+
+/** Mascotas con recordatorio de vacuna/desparasitación en los próximos N días. */
+export async function checkVaccinationReminders(
+  withinDays = REMINDER_WINDOW_DAYS,
+): Promise<VaccinationReminderPet[]> {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + withinDays);
+  end.setHours(23, 59, 59, 999);
+
+  return prisma.pet.findMany({
+    where: {
+      isActive: true,
+      nextReminderDate: {
+        gte: start,
+        lte: end,
+      },
+    },
+    select: VACCINATION_REMINDER_SELECT,
+    orderBy: { nextReminderDate: "asc" },
+  });
+}
+
+async function assertVetClinicExists(vetClinicId?: string) {
+  if (!vetClinicId) return;
+
+  const clinic = await prisma.petShop.findFirst({
+    where: { id: vetClinicId, isActive: true },
+    select: { id: true, name: true },
+  });
+
+  if (!clinic) {
+    throw new AppError(400, "La veterinaria o pet shop seleccionado no es válido");
+  }
+}
+
 /** Payload médico devuelto al registrar — independiente del caché del cliente Prisma. */
 export type PetMedicalRecord = {
   medicalConditions: string | null;
@@ -58,7 +149,18 @@ const PET_CREATE_SELECT = {
   isActive: true,
   isLost: true,
   createdAt: true,
-} as const;
+  lastVaccinationDate: true,
+  lastDewormingDate: true,
+  nextReminderDate: true,
+  vetClinicId: true,
+  vetClinic: {
+    select: { id: true, name: true, type: true },
+  },
+} as const satisfies Prisma.PetSelect;
+
+type CreatedPetWithHealth = Prisma.PetGetPayload<{
+  select: typeof PET_CREATE_SELECT;
+}>;
 
 function buildCharacteristicsSummary(input: CreatePetInput): string | undefined {
   const parts = [
@@ -86,6 +188,11 @@ function buildPetCreateData(
   qrToken: string,
   photoUrl?: string,
 ): Prisma.PetUncheckedCreateInput {
+  const nextReminderDate = computeNextReminderDate(
+    input.lastVaccinationDate,
+    input.lastDewormingDate,
+  );
+
   return {
     userId,
     name: input.name,
@@ -102,8 +209,12 @@ function buildPetCreateData(
     finderMessage: input.finderMessage,
     photoUrl,
     qrToken,
+    vetClinicId: input.vetClinicId ?? null,
+    lastVaccinationDate: input.lastVaccinationDate ?? null,
+    lastDewormingDate: input.lastDewormingDate ?? null,
+    nextReminderDate,
     ...buildPetMedicalData(input),
-  } as Prisma.PetUncheckedCreateInput;
+  };
 }
 
 export async function createPet(
@@ -111,12 +222,17 @@ export async function createPet(
   input: CreatePetInput,
   options?: { photoUrl?: string; req?: Pick<Request, "get" | "protocol"> },
 ) {
+  await assertVetClinicExists(input.vetClinicId);
   const qrToken = generateQrToken();
+  const nextReminderDate = computeNextReminderDate(
+    input.lastVaccinationDate,
+    input.lastDewormingDate,
+  );
 
-  const pet = (await prisma.pet.create({
-    data: buildPetCreateData(userId, input, qrToken, options?.photoUrl) as any,
-    select: PET_CREATE_SELECT as any,
-  })) as unknown as CreatedPetPayload;
+  const pet: CreatedPetWithHealth = await prisma.pet.create({
+    data: buildPetCreateData(userId, input, qrToken, options?.photoUrl),
+    select: PET_CREATE_SELECT,
+  });
 
   const scanUrl = buildPetScanUrl(pet.qrToken, options?.req);
 
@@ -128,6 +244,12 @@ export async function createPet(
     scanUrl,
     qrSvgUrl: `/api/qr/generate/${pet.qrToken}`,
     qrSvgDownloadUrl: `/api/qr/generate/${pet.qrToken}?download=1`,
+    loyaltyReminder: nextReminderDate
+      ? {
+          nextReminderDate: nextReminderDate.toISOString(),
+          vetClinicName: pet.vetClinic?.name ?? null,
+        }
+      : null,
   };
 }
 
