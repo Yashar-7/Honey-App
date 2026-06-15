@@ -35,5 +35,7 @@ export { LandingNavbar } from "./LandingNavbar";
 export { LoginLink } from "./LoginLink";
 export { PrimaryCta } from "./PrimaryCta";
 export { SocialProofSection } from "./SocialProofSection";
+export { TestimonialsMarquee } from "./TestimonialsMarquee";
+export { TESTIMONIALS } from "./testimonials";
 export { StickyMobileCta } from "./StickyMobileCta";
 export { TrustSection } from "./TrustSection";

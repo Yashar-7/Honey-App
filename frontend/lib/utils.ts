@@ -22,6 +22,17 @@ export const COLOR_OPTIONS = [
   { id: "personalizado", label: "Personalizado", value: "", hex: "#FFB700" },
 ] as const;
 
+export function deriveOwnerNameFromEmail(email: string): string {
+  const local = email.split("@")[0]?.trim() || "Dueño";
+  return local.charAt(0).toUpperCase() + local.slice(1);
+}
+
+export function persistOwnerSession(token: string, email: string, name: string) {
+  sessionStorage.setItem(STORAGE_KEY, token);
+  sessionStorage.setItem(EMAIL_KEY, email);
+  sessionStorage.setItem(NAME_KEY, name);
+}
+
 export function buildFinderMessage(petName: string, ownerName: string): string {
   const owner = ownerName.trim() || "su dueño";
   return `¡${petName} se perdió! Tocá acá y avisale a ${owner} sin mostrar tu número`;

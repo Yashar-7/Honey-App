@@ -1,6 +1,8 @@
 import { LoginLink } from "./LoginLink";
 import { PrimaryCta } from "./PrimaryCta";
 
+const HERO_IMAGE = "/assets/hero-mascota-qr.png";
+
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-12">
@@ -35,20 +37,23 @@ export function HeroSection() {
           <div className="relative overflow-hidden rounded-[20px] border border-border bg-card">
             <div className="relative aspect-[4/5] sm:aspect-[5/4]">
               <img
-                src="/assets/honey-app-logo.png"
-                alt="Mascota con chapita QR Honey App"
-                className="absolute inset-0 h-full w-full object-contain p-10 sm:p-12"
+                src={HERO_IMAGE}
+                alt="Perro con chapita QR Honey App en el collar"
+                className="absolute inset-0 h-full w-full object-cover object-center"
+                width={640}
+                height={800}
                 decoding="async"
+                fetchPriority="high"
               />
               <div
-                className="absolute inset-0 bg-gradient-to-t from-night via-night/20 to-transparent"
+                className="absolute inset-0 bg-gradient-to-t from-night via-night/45 to-transparent"
                 aria-hidden="true"
               />
-              <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
-                <p className="text-sm font-semibold text-white">
+              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-night/90 to-transparent p-5 sm:p-6">
+                <p className="text-sm font-semibold text-white drop-shadow-sm">
                   Escaneada → aviso instantáneo
                 </p>
-                <p className="mt-1 text-xs text-muted">
+                <p className="mt-1 text-xs text-white/80 drop-shadow-sm">
                   Chapita QR en el collar · Privacidad total
                 </p>
               </div>

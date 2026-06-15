@@ -7,11 +7,11 @@ export function LandingNavbar() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
         <Link href="/" className="flex shrink-0 items-center gap-2.5">
           <img
-            src="/assets/honey-app-logo.png"
-            alt="Honey App — perro y mariposa"
+            src="/honey-app-logo.png"
+            alt="Logo Honey App"
             width={40}
             height={40}
-            className="h-10 w-10 rounded-xl object-contain"
+            className="h-10 w-10 shrink-0 object-contain"
             decoding="async"
           />
           <span className="hidden text-base font-extrabold tracking-tight text-white sm:inline">

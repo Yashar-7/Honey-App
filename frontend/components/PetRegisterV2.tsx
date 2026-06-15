@@ -25,6 +25,8 @@ import { Progress } from "@/components/ui/progress";
 import {
   buildFinderMessage,
   COLOR_OPTIONS,
+  deriveOwnerNameFromEmail,
+  persistOwnerSession,
   type RegisterPetResponse,
   type Species,
   triggerHaptic,
@@ -33,10 +35,11 @@ import {
 type Step = 1 | 2 | 3 | "success";
 
 export interface PetRegisterV2Props {
-  authToken: string;
-  ownerName: string;
+  authToken?: string;
+  ownerName?: string;
   ownerEmail?: string;
   onLogout?: () => void;
+  onExit?: () => void;
 }
 
 const stepProgress: Record<Step, number> = {
@@ -53,11 +56,16 @@ const slideVariants = {
 };
 
 export function PetRegisterV2({
-  authToken,
-  ownerName,
-  ownerEmail,
+  authToken: authTokenProp = "",
+  ownerName: ownerNameProp = "Dueño",
+  ownerEmail: ownerEmailProp = "",
   onLogout,
+  onExit,
 }: PetRegisterV2Props) {
+  const [authToken, setAuthToken] = useState(authTokenProp);
+  const [ownerName, setOwnerName] = useState(ownerNameProp);
+  const [accountEmail, setAccountEmail] = useState(ownerEmailProp);
+  const [accountPassword, setAccountPassword] = useState("");
   const [step, setStep] = useState<Step>(1);
   const [direction, setDirection] = useState(1);
   const [name, setName] = useState("");
@@ -92,6 +100,10 @@ export function PetRegisterV2({
   const photoValid = Boolean(photoFile);
   const step1Ready = nameValid && photoValid;
   const step2Ready = Boolean(species) && Boolean(colorId);
+  const needsAccount = !authToken;
+  const accountEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountEmail.trim());
+  const accountPasswordValid = accountPassword.length >= 6;
+  const accountReady = !needsAccount || (accountEmailValid && accountPasswordValid);
 
   const resolvedColor = useMemo(() => {
     if (!colorId) return "";
@@ -166,9 +178,51 @@ export function PetRegisterV2({
   };
 
   const submitPet = async () => {
-    if (!species || !photoFile || !nameValid) return;
+    if (!species || !photoFile || !nameValid || !accountReady) return;
     setSubmitting(true);
     setError(null);
+
+    let token = authToken;
+    let resolvedOwnerName = ownerName;
+
+    try {
+      if (!token) {
+        const email = accountEmail.trim().toLowerCase();
+        const regRes = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: deriveOwnerNameFromEmail(email),
+            email,
+            password: accountPassword,
+          }),
+        });
+        const regData = (await regRes.json().catch(() => ({}))) as {
+          token?: string;
+          user?: { name?: string; email?: string };
+          error?: string;
+          message?: string;
+        };
+
+        if (!regRes.ok) {
+          if (regRes.status === 409) {
+            throw new Error(
+              "Ya existe una cuenta con ese email. Iniciá sesión para agregar tu mascota.",
+            );
+          }
+          throw new Error(regData.error || regData.message || `Error ${regRes.status}`);
+        }
+
+        if (!regData.token) {
+          throw new Error("No se pudo crear la cuenta");
+        }
+
+        token = regData.token;
+        resolvedOwnerName = regData.user?.name || deriveOwnerNameFromEmail(email);
+        persistOwnerSession(token, regData.user?.email || email, resolvedOwnerName);
+        setAuthToken(token);
+        setOwnerName(resolvedOwnerName);
+      }
 
     const formData = new FormData();
     formData.append("name", name.trim());
@@ -176,14 +230,13 @@ export function PetRegisterV2({
     formData.append("color", resolvedColor);
     formData.append(
       "finderMessage",
-      buildFinderMessage(name.trim(), ownerName),
+      buildFinderMessage(name.trim(), resolvedOwnerName),
     );
     formData.append("photo", photoFile);
 
-    try {
       const res = await fetch("/api/pets", {
         method: "POST",
-        headers: { Authorization: `Bearer ${authToken}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
       const data = (await res.json().catch(() => ({}))) as RegisterPetResponse & {
@@ -288,7 +341,7 @@ export function PetRegisterV2({
 
   const handleExitAttempt = () => {
     if (step === "success" || (!name.trim() && !photoFile && !species)) {
-      onLogout?.();
+      onExit?.();
       return;
     }
     setExitOpen(true);
@@ -629,12 +682,68 @@ export function PetRegisterV2({
               </div>
 
               <p className="text-center text-sm text-white/60">
-                Confirmá y generamos la chapita QR al instante
+                {needsAccount
+                  ? "Último paso: creá tu cuenta para vincular la mascota"
+                  : "Confirmá y generamos la chapita QR al instante"}
               </p>
+
+              {needsAccount && (
+                <div className="space-y-3 rounded-2xl border border-mustard/25 bg-night/50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-mustard">
+                    Tu cuenta Honey App
+                  </p>
+                  <div className="space-y-2">
+                    <label htmlFor="account-email" className="sr-only">
+                      Email
+                    </label>
+                    <input
+                      id="account-email"
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      value={accountEmail}
+                      onChange={(e) => setAccountEmail(e.target.value)}
+                      placeholder="Tu email"
+                      className="h-12 w-full rounded-xl border border-mustard/25 bg-[#0A0A0A] px-4 text-sm text-white placeholder:text-white/35 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="account-password" className="sr-only">
+                      Contraseña
+                    </label>
+                    <input
+                      id="account-password"
+                      type="password"
+                      autoComplete="new-password"
+                      value={accountPassword}
+                      onChange={(e) => setAccountPassword(e.target.value)}
+                      placeholder="Contraseña (mín. 6 caracteres)"
+                      className="h-12 w-full rounded-xl border border-mustard/25 bg-[#0A0A0A] px-4 text-sm text-white placeholder:text-white/35 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                    />
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-white/45">
+                    Solo al guardar creamos tu cuenta y vinculamos la mascota. Sin spam.
+                  </p>
+                  {accountEmail.trim() && !accountEmailValid && (
+                    <p className="text-xs text-red-300">Ingresá un email válido</p>
+                  )}
+                  {accountPassword.length > 0 && !accountPasswordValid && (
+                    <p className="text-xs text-red-300">La contraseña debe tener al menos 6 caracteres</p>
+                  )}
+                </div>
+              )}
 
               {error && (
                 <p className="rounded-xl border border-red-400/30 bg-red-950/30 px-3 py-2 text-sm text-red-200" role="alert">
                   {error}
+                  {error.includes("Iniciá sesión") && (
+                    <>
+                      {" "}
+                      <a href="/login" className="font-semibold text-mustard underline">
+                        Ir al login
+                      </a>
+                    </>
+                  )}
                 </p>
               )}
 
@@ -642,11 +751,17 @@ export function PetRegisterV2({
                 type="button"
                 size="lg"
                 className="w-full shadow-mustard"
-                disabled={submitting}
+                disabled={submitting || !accountReady}
                 onClick={submitPet}
               >
                 <QrCode className="h-5 w-5" aria-hidden />
-                {submitting ? "Generando chapita…" : "Generar chapita QR"}
+                {submitting
+                  ? needsAccount
+                    ? "Guardando…"
+                    : "Generando chapita…"
+                  : needsAccount
+                    ? "Guardar y generar chapita QR"
+                    : "Generar chapita QR"}
                 <ArrowRight className="h-5 w-5" aria-hidden />
               </Button>
 
@@ -814,9 +929,9 @@ export function PetRegisterV2({
         </AnimatePresence>
       </motion.article>
 
-      {ownerEmail && (
+      {authToken && ownerEmailProp && (
         <p className="text-center text-[11px] text-white/35">
-          Sesión: {ownerEmail}
+          Sesión: {ownerEmailProp}
         </p>
       )}
 
@@ -838,7 +953,7 @@ export function PetRegisterV2({
               variant="secondary"
               onClick={() => {
                 setExitOpen(false);
-                onLogout?.();
+                onExit?.();
               }}
             >
               Salir igual

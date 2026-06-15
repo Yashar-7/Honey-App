@@ -8,31 +8,44 @@ import { EMAIL_KEY, NAME_KEY, STORAGE_KEY } from "@/lib/utils";
 export default function RegistroPage() {
   const [ready, setReady] = useState(false);
   const [authToken, setAuthToken] = useState("");
-  const [ownerName, setOwnerName] = useState("");
+  const [ownerName, setOwnerName] = useState("Dueño");
   const [ownerEmail, setOwnerEmail] = useState("");
 
   useEffect(() => {
     let cancelled = false;
 
-    async function guard() {
+    async function init() {
       const token = sessionStorage.getItem(STORAGE_KEY) || "";
-      if (!token) {
-        window.location.replace("/login");
-        return;
-      }
-
       const params = new URLSearchParams(window.location.search);
       const forceRegister =
         params.get("modo") === "registro" || params.get("nueva") === "1";
 
-      const dest = await resolveOwnerDestination(token, { forceRegister });
-      if (dest === "/login") {
-        window.location.replace("/login");
+      if (!token) {
+        if (cancelled) return;
+        setAuthToken("");
+        setOwnerName("Dueño");
+        setOwnerEmail("");
+        setReady(true);
         return;
       }
-      if (dest !== "/registro") {
-        window.location.replace(dest);
-        return;
+
+      if (!forceRegister) {
+        const dest = await resolveOwnerDestination(token, { forceRegister: false });
+        if (dest === "/login") {
+          sessionStorage.removeItem(STORAGE_KEY);
+          sessionStorage.removeItem(EMAIL_KEY);
+          sessionStorage.removeItem(NAME_KEY);
+          if (cancelled) return;
+          setAuthToken("");
+          setOwnerName("Dueño");
+          setOwnerEmail("");
+          setReady(true);
+          return;
+        }
+        if (dest === "/dashboard") {
+          window.location.replace("/dashboard");
+          return;
+        }
       }
 
       if (cancelled) return;
@@ -42,7 +55,7 @@ export default function RegistroPage() {
       setReady(true);
     }
 
-    guard();
+    init();
     return () => {
       cancelled = true;
     };
@@ -51,7 +64,7 @@ export default function RegistroPage() {
   if (!ready) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-night px-4">
-        <p className="text-sm text-white/60">Cargando portal del dueño…</p>
+        <p className="text-sm text-white/60">Cargando registro…</p>
       </main>
     );
   }
@@ -62,6 +75,9 @@ export default function RegistroPage() {
         authToken={authToken}
         ownerName={ownerName}
         ownerEmail={ownerEmail}
+        onExit={() => {
+          window.location.href = authToken ? "/dashboard" : "/";
+        }}
         onLogout={() => {
           sessionStorage.removeItem(STORAGE_KEY);
           sessionStorage.removeItem(EMAIL_KEY);
