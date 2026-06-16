@@ -5,17 +5,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        night: "#0A0A0A",
-        card: "#141414",
-        border: "#2A2A2A",
-        muted: "#B0B0B0",
+        night: "#0f172a",
+        card: "#1e293b",
+        border: "#334155",
+        muted: "#94a3b8",
         honey: {
-          DEFAULT: "#FFC107",
-          hover: "#FFD54F",
+          DEFAULT: "#f59e0b",
+          hover: "#d97706",
         },
         mustard: {
-          DEFAULT: "#FFC107",
-          dark: "#FFD54F",
+          DEFAULT: "#f59e0b",
+          dark: "#d97706",
         },
       },
       borderRadius: {
@@ -25,8 +25,8 @@ const config: Config = {
         script: ["var(--font-script)", "cursive"],
       },
       boxShadow: {
-        honey: "0 8px 24px rgba(255, 193, 7, 0.35)",
-        mustard: "0 8px 24px rgba(255, 193, 7, 0.35)",
+        honey: "0 8px 24px rgba(245, 158, 11, 0.35)",
+        mustard: "0 8px 24px rgba(245, 158, 11, 0.35)",
       },
     },
   },

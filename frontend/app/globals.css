@@ -1,3 +1,5 @@
+@import "./variables.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -9,6 +11,8 @@
 
   body {
     @apply min-h-dvh bg-night text-white antialiased;
+    color: var(--text-white);
+    background-color: var(--bg-dark-blue);
   }
 
   input,

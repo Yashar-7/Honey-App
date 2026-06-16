@@ -1,24 +1,26 @@
+@import url("/variables.css");
+
 /* Honey App — Visión Canina Elegante (premium oscuro) */
 :root {
-  --honey-bg: #0f172a;
-  --honey-surface: #1e293b;
-  --honey-surface-raised: #243044;
-  --honey-border: #334155;
+  --honey-bg: var(--bg-dark-blue);
+  --honey-surface: var(--surface-raised);
+  --honey-surface-raised: var(--surface-card);
+  --honey-border: var(--border-muted);
   --honey-border-soft: #475569;
-  --honey-accent: #d97706;
-  --honey-accent-hover: #b45309;
-  --honey-accent-glow: rgba(217, 119, 6, 0.35);
-  --honey-accent-soft: rgba(217, 119, 6, 0.12);
+  --honey-accent: var(--accent-yellow);
+  --honey-accent-hover: var(--accent-yellow-hover);
+  --honey-accent-glow: var(--accent-yellow-glow);
+  --honey-accent-soft: var(--accent-yellow-soft);
   --honey-blue-muted: #64748b;
-  --honey-text: #f8fafc;
-  --honey-text-muted: #94a3b8;
+  --honey-text: var(--text-white);
+  --honey-text-muted: var(--text-muted);
   --honey-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  --honey-shadow-glow: 0 4px 24px rgba(217, 119, 6, 0.15);
+  --honey-shadow-glow: 0 4px 24px rgba(245, 158, 11, 0.15);
 }
 
 body.honey-app {
-  background: var(--honey-bg);
-  color: var(--honey-text-muted);
+  background: var(--bg-dark-blue);
+  color: var(--text-muted);
 }
 
 .card-honey {
@@ -28,22 +30,26 @@ body.honey-app {
   box-shadow: var(--honey-shadow);
 }
 
+.map-wrapper {
+  border: 2px solid var(--accent-yellow) !important;
+}
+
 .btn-honey-primary {
-  background: var(--honey-accent);
-  color: var(--honey-text);
+  background: var(--accent-yellow);
+  color: var(--text-white);
   font-weight: 700;
   border-radius: 1rem;
   transition: background 0.2s, box-shadow 0.2s;
 }
 .btn-honey-primary:hover {
-  background: var(--honey-accent-hover);
+  background: var(--accent-yellow-hover);
   box-shadow: var(--honey-shadow-glow);
 }
 
 .input-honey {
-  background: var(--honey-bg);
+  background: var(--bg-dark-blue);
   border: 1px solid var(--honey-border);
-  color: var(--honey-text);
+  color: var(--text-white);
   border-radius: 0.75rem;
 }
 .input-honey::placeholder {
@@ -51,12 +57,12 @@ body.honey-app {
 }
 .input-honey:focus {
   outline: none;
-  border-color: var(--honey-accent);
-  box-shadow: 0 0 0 3px var(--honey-accent-soft);
+  border-color: var(--accent-yellow);
+  box-shadow: 0 0 0 3px var(--accent-yellow-soft);
 }
 
-.text-honey-title { color: var(--honey-text); }
-.text-honey-accent { color: var(--honey-accent); }
+.text-honey-title { color: var(--text-white); }
+.text-honey-accent { color: var(--accent-yellow); }
 
 .honey-logo {
   height: 42px;

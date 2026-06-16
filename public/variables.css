@@ -1,0 +1,16 @@
+/* Honey App — tokens de identidad visual */
+:root {
+  --bg-dark-blue: #0f172a;
+  --accent-yellow: #f59e0b;
+  --text-white: #ffffff;
+
+  /* Derivados (hover, superficies, glow) */
+  --accent-yellow-hover: #d97706;
+  --accent-yellow-soft: rgba(245, 158, 11, 0.12);
+  --accent-yellow-glow: rgba(245, 158, 11, 0.35);
+  --accent-yellow-border: rgba(245, 158, 11, 0.4);
+  --surface-raised: #1e293b;
+  --surface-card: #243044;
+  --border-muted: #334155;
+  --text-muted: #94a3b8;
+}

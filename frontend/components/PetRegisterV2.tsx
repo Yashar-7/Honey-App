@@ -9,7 +9,6 @@ import {
   Camera,
   CheckCircle2,
   HeartPulse,
-  PawPrint,
   QrCode,
   ShieldCheck,
   Stethoscope,
@@ -392,10 +391,17 @@ export function PetRegisterV2({
       )}
 
       <header className="flex items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-2 text-mustard">
-          <PawPrint className="h-5 w-5" aria-hidden />
-          <span className="text-xs font-bold uppercase tracking-widest">
-            Mar del Plata · Honey App
+        <div className="flex min-w-0 items-center gap-2.5">
+          <img
+            src="/assets/honey-app-logo.png"
+            alt="Honey App"
+            width={40}
+            height={40}
+            className="h-10 w-10 shrink-0 object-contain"
+            decoding="async"
+          />
+          <span className="hidden text-[10px] font-bold uppercase tracking-widest text-mustard sm:inline">
+            Mar del Plata
           </span>
         </div>
         <button
@@ -690,7 +696,7 @@ export function PetRegisterV2({
                       id="vet-clinic"
                       value={vetClinicId}
                       onChange={(e) => setVetClinicId(e.target.value)}
-                      className="h-12 w-full rounded-xl border border-mustard/25 bg-[#0A0A0A] px-3 text-sm text-white focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                      className="h-12 w-full rounded-xl border border-mustard/25 bg-night px-3 text-sm text-white focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
                     >
                       <option value="">Sin seleccionar</option>
                       {petShops.map((shop) => (
@@ -714,7 +720,7 @@ export function PetRegisterV2({
                       value={lastVaccinationDate}
                       max={new Date().toISOString().slice(0, 10)}
                       onChange={(e) => setLastVaccinationDate(e.target.value)}
-                      className="h-12 w-full rounded-xl border border-mustard/25 bg-[#0A0A0A] px-3 text-sm text-white focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                      className="h-12 w-full rounded-xl border border-mustard/25 bg-night px-3 text-sm text-white focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
                     />
                   </div>
                 </div>
@@ -805,7 +811,7 @@ export function PetRegisterV2({
                       value={accountEmail}
                       onChange={(e) => setAccountEmail(e.target.value)}
                       placeholder="Tu email"
-                      className="h-12 w-full rounded-xl border border-mustard/25 bg-[#0A0A0A] px-4 text-sm text-white placeholder:text-white/35 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                      className="h-12 w-full rounded-xl border border-mustard/25 bg-night px-4 text-sm text-white placeholder:text-white/35 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
                     />
                   </div>
                   <div className="space-y-2">
@@ -819,7 +825,7 @@ export function PetRegisterV2({
                       value={accountPassword}
                       onChange={(e) => setAccountPassword(e.target.value)}
                       placeholder="Contraseña (mín. 6 caracteres)"
-                      className="h-12 w-full rounded-xl border border-mustard/25 bg-[#0A0A0A] px-4 text-sm text-white placeholder:text-white/35 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                      className="h-12 w-full rounded-xl border border-mustard/25 bg-night px-4 text-sm text-white placeholder:text-white/35 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
                     />
                   </div>
                   <p className="text-[11px] leading-relaxed text-white/45">
@@ -991,7 +997,7 @@ export function PetRegisterV2({
                     maxLength={1000}
                     rows={4}
                     placeholder="Ej: Toma medicación cada 12 hs · Alérgico al pollo · Asustadizo con ruidos fuertes"
-                    className="min-h-[120px] w-full resize-y rounded-xl border border-mustard/25 bg-[#0A1628] px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
+                    className="min-h-[120px] w-full resize-y rounded-xl border border-mustard/25 bg-night px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
                   />
                   {healthError && (
                     <p className="mt-2 text-xs text-red-300" role="alert">

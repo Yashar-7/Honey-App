@@ -26,7 +26,7 @@ export function StickyMobileCta() {
       <div className="mx-auto max-w-lg px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <a
           href={REGISTRO_HREF}
-          className="flex h-14 w-full items-center justify-center rounded-[14px] bg-honey text-[16px] font-bold text-night shadow-honey transition hover:bg-honey-hover active:scale-[0.98]"
+          className="flex h-14 w-full items-center justify-center rounded-[14px] bg-honey text-[16px] font-bold text-white shadow-honey transition hover:bg-honey-hover active:scale-[0.98]"
         >
           Registrar mi mascota — gratis
         </a>

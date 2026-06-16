@@ -875,6 +875,12 @@ body {
   margin-bottom: 1.25rem;
 }
 
+.portal-header .logo {
+  height: 40px;
+  width: 40px;
+  max-width: 40px;
+}
+
 .portal-badge {
   display: inline-block;
   margin-bottom: 0.5rem;
