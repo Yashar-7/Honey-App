@@ -45,7 +45,12 @@
         .btn-view-qr-icon:hover { background: rgba(217,119,6,0.22); border-color: rgba(217,119,6,0.55); color: #fde68a; }
         #qr-modal-image { background: #fff; border-radius: 1rem; padding: 12px; max-width: 280px; width: 100%; }
         #mode-badge { font-size: 10px; letter-spacing: 0.05em; }
-        .btn-secure-chat { min-height: 44px; }
+        #chat-modal .chat-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+        .btn-resolve-case { min-height: 36px; padding: 0.35rem 0.75rem; border-radius: 0.65rem; border: 1px solid rgba(255,193,7,0.45); background: rgba(10,10,10,0.55); color: #ffc107; font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap; }
+        .btn-resolve-case:hover { background: rgba(255,193,7,0.12); }
+        .push-toggle { display: flex; align-items: center; gap: 0.65rem; padding: 0.75rem 1rem; border-radius: 1rem; border: 1px solid rgba(217,119,6,0.35); background: rgba(217,119,6,0.1); cursor: pointer; }
+        .push-toggle input { width: 1rem; height: 1rem; accent-color: #ffc107; }
+        .push-toggle span { color: #fbbf24; font-size: 0.875rem; font-weight: 700; }
         .community-mode #alerts-feed { background: linear-gradient(180deg, rgba(30,41,59,0.5) 0%, rgba(15,23,42,0.3) 100%); }
         .community-stats { background: linear-gradient(135deg, #1e293b 0%, #243044 50%, #1a2744 100%); border: 1px solid rgba(148,163,184,0.2); }
         .community-card { background: #243044; border: 1px solid #475569; transition: border-color 0.2s, transform 0.2s; }
@@ -111,11 +116,11 @@
             <p class="px-4 text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Mis mascotas</p>
             <div id="sidebar-pets" class="px-3 pb-2 max-h-44 overflow-y-auto space-y-2"></div>
             <div class="sidebar-footer p-3 border-t border-slate-700 space-y-2 mt-auto">
-                <button type="button" id="btn-push-alerts"
-                    class="touch-target w-full text-left px-4 py-3 rounded-2xl border border-[#d97706]/35 bg-[#d97706]/10 text-[#fbbf24] text-sm font-bold hover:bg-[#d97706]/20 transition">
-                    🔔 Activar alertas
-                </button>
-                <p id="push-status" class="text-[10px] text-slate-500 px-1 leading-relaxed"></p>
+                <label for="chk-push-alerts" class="push-toggle touch-target w-full">
+                    <input type="checkbox" id="chk-push-alerts" checked aria-describedby="push-status">
+                    <span>🔔 Activar alertas</span>
+                </label>
+                <p id="push-status" class="text-[10px] text-slate-500 px-1 leading-relaxed">Alertas activadas por defecto para nuevos usuarios.</p>
                 <a href="/registro?modo=registro" class="touch-target block text-center text-sm text-[#d97706] font-semibold py-2 hover:text-amber-400">+ Nueva mascota</a>
                 <button type="button" id="btn-logout" class="touch-target w-full text-xs text-slate-500 hover:text-slate-300 py-2">Cerrar sesión</button>
             </div>
@@ -252,12 +257,15 @@
     <!-- Chat seguro modal -->
     <div id="chat-modal" role="dialog" aria-modal="true" aria-labelledby="chat-modal-title">
         <div class="card-honey w-full max-w-md max-h-[85vh] flex flex-col rounded-2xl overflow-hidden border border-[#d97706]/40 shadow-2xl">
-            <div class="px-4 py-3 border-b border-slate-600 flex items-center justify-between bg-[#243044]">
-                <div>
+            <div class="chat-modal-header px-4 py-3 border-b border-slate-600 bg-[#243044]">
+                <div class="min-w-0 flex-1">
                     <p id="chat-modal-title" class="font-bold text-[#f8fafc] text-sm">💬 Chat Seguro</p>
                     <p id="chat-modal-sub" class="text-[10px] text-slate-400">Colaborador anónimo · Privacidad total</p>
                 </div>
-                <button type="button" id="chat-modal-close" class="w-10 h-10 rounded-xl bg-slate-700 text-slate-300 hover:text-white text-lg" aria-label="Cerrar">×</button>
+                <button type="button" id="btn-resolve-case" class="btn-resolve-case" title="Marcar caso como resuelto">
+                    ✓ Finalizar caso
+                </button>
+                <button type="button" id="chat-modal-close" class="w-10 h-10 rounded-xl bg-slate-700 text-slate-300 hover:text-white text-lg shrink-0" aria-label="Cerrar chat">×</button>
             </div>
             <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-2 min-h-[200px] max-h-[40vh] bg-[#0f172a]"></div>
             <form id="chat-reply-form" class="p-3 border-t border-slate-600 flex gap-2 bg-[#1e293b]">
@@ -294,35 +302,22 @@
         let chatPollTimer = null;
         let chatRealtimeChannel = null;
         let chatRealtimeConnected = false;
-        let lastVoiceAlertAt = 0;
         let communityWallPainted = false;
         let lastAlertsFingerprint = "";
         let lastPetsFingerprint = "";
         let lastMapRenderKey = "";
 
-        function playSecurityVoiceAlert(text) {
-            if (!text || !window.speechSynthesis) return;
-            const now = Date.now();
-            if (now - lastVoiceAlertAt < 9000) return;
-            lastVoiceAlertAt = now;
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.lang = "es-AR";
-            utter.rate = 0.92;
-            utter.pitch = 1;
-            window.speechSynthesis.speak(utter);
-        }
-
         function handleWarRoomRealtimePayload(payload) {
             const event = payload?.payload ?? payload;
-            if (event?.speechAlert) {
-                playSecurityVoiceAlert(event.speechAlert);
-            }
-            if (
-                event?.sessionId &&
-                activeChatSessionId &&
-                event.sessionId === activeChatSessionId
-            ) {
+            if (event?.autoOpenChat && event?.sessionId) {
+                const chat = state.activeChats.find((c) => c.sessionId === event.sessionId);
+                const petName =
+                    event.petName ||
+                    chat?.petName ||
+                    state.pets.find((p) => p.id === event.petId)?.name ||
+                    "Mascota";
+                openSecureChat(event.sessionId, petName);
+            } else if (event?.sessionId && activeChatSessionId === event.sessionId) {
                 void loadChatMessages();
             }
             void poll();
@@ -643,13 +638,14 @@
                 return;
             }
 
-            const btn = $("btn-push-alerts");
-            btn.disabled = true;
+            const btn = $("chk-push-alerts");
+            if (btn) btn.disabled = true;
             setPushStatus("Solicitando permiso…");
 
             try {
                 const permission = await Notification.requestPermission();
                 if (permission !== "granted") {
+                    $("chk-push-alerts").checked = false;
                     setPushStatus("Permiso denegado. Activá las notificaciones en el navegador.");
                     return;
                 }
@@ -681,13 +677,44 @@
                     localStorage.setItem(PUSH_ENDPOINT_KEY, pushSubscriptionEndpoint);
                 }
 
-                btn.textContent = "✓ Alertas activas";
-                btn.classList.add("border-emerald-500/40", "bg-emerald-500/10", "text-emerald-400");
+                $("chk-push-alerts").checked = true;
                 setPushStatus("Recibirás avisos aunque cierres esta pestaña.", true);
             } catch (err) {
                 setPushStatus(`No se pudieron activar: ${err.message}`);
             } finally {
-                btn.disabled = false;
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        async function disableWebPush() {
+            const endpoint = pushSubscriptionEndpoint || localStorage.getItem(PUSH_ENDPOINT_KEY);
+            if (endpoint && authToken) {
+                try {
+                    await api("/api/owner/push/subscribe", {
+                        method: "DELETE",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ endpoint }),
+                    });
+                } catch { /* noop */ }
+            }
+            if ("serviceWorker" in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.ready;
+                    const sub = await registration.pushManager.getSubscription();
+                    if (sub) await sub.unsubscribe();
+                } catch { /* noop */ }
+            }
+            localStorage.removeItem(PUSH_ENDPOINT_KEY);
+            pushSubscriptionEndpoint = "";
+            setPushStatus("Alertas desactivadas.");
+        }
+
+        async function syncPushPreference() {
+            const enabled = $("chk-push-alerts")?.checked;
+            if (enabled) {
+                await setupWebPush();
+            } else {
+                await disableWebPush();
             }
         }
 
@@ -1243,6 +1270,32 @@
             void teardownChatRealtime();
         }
 
+        async function resolveActiveCase() {
+            if (!activeChatSessionId) return;
+            const petName = $("chat-modal-sub").dataset.petName || "tu mascota";
+            const confirmed = window.confirm(
+                `¿Marcar el caso de ${petName} como resuelto?\n\nSe cerrará el chat y desaparecerá de las alertas activas.`,
+            );
+            if (!confirmed) return;
+
+            const btn = $("btn-resolve-case");
+            btn.disabled = true;
+            try {
+                await api(`/api/chat/sessions/${activeChatSessionId}/resolve`, {
+                    method: "POST",
+                });
+                closeSecureChat();
+                resetOwnerModeVisuals();
+                invalidateCommunityWall();
+                await poll();
+                configurePolling();
+            } catch (err) {
+                alert(err.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
         function mergeWarRoom(data) {
             const newIds = new Set();
             state.pets = data.pets;
@@ -1260,21 +1313,21 @@
                     if (!knownReportIds.has(report.id)) {
                         newIds.add(report.id);
                         knownReportIds.add(report.id);
-                        if (
-                            report.type === "gps" &&
-                            report.locationReference
-                        ) {
-                            const addr = report.locationReference.replace(/^📍\s*/, "");
-                            playSecurityVoiceAlert(
-                                `Atención. ${report.petName} fue encontrada cerca de ${addr}.`,
-                            );
-                        }
                     }
                     reportMap.set(report.id, report);
                 }
                 state.reports = [...reportMap.values()].sort(
                     (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
                 ).slice(0, 50);
+
+                if (newIds.size > 0) {
+                    const newestWithChat = state.reports.find(
+                        (r) => newIds.has(r.id) && r.sessionId,
+                    );
+                    if (newestWithChat?.sessionId) {
+                        openSecureChat(newestWithChat.sessionId, newestWithChat.petName);
+                    }
+                }
             } else {
                 state.reports = [];
                 knownReportIds.clear();
@@ -1388,6 +1441,9 @@
         });
 
         $("chat-modal-close").addEventListener("click", closeSecureChat);
+        $("btn-resolve-case")?.addEventListener("click", () => {
+            void resolveActiveCase();
+        });
         $("chat-modal").addEventListener("click", (e) => {
             if (e.target === $("chat-modal")) closeSecureChat();
         });
@@ -1428,8 +1484,8 @@
             }
         });
 
-        $("btn-push-alerts")?.addEventListener("click", () => {
-            void setupWebPush();
+        $("chk-push-alerts")?.addEventListener("change", () => {
+            void syncPushPreference();
         });
 
         $("btn-logout").addEventListener("click", () => {
@@ -1454,7 +1510,12 @@
             initMap();
             poll()
                 .then(() => configurePolling())
-                .then(() => setupRealtime());
+                .then(() => setupRealtime())
+                .then(() => {
+                    if ($("chk-push-alerts")?.checked && !pushSubscriptionEndpoint) {
+                        void setupWebPush();
+                    }
+                });
             setTimeout(() => map?.invalidateSize(), 400);
         }
     </script>

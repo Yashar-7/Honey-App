@@ -215,13 +215,9 @@ export async function registerScan(
     await appendLocationReferenceMessage(meta.sessionId, addressLabel);
   }
 
-  const ownerBody = addressLabel.includes("Mar del Plata Centro")
-    ? `Un vecino compartió la ubicación de ${pet.name}. Revisá el mapa en Honey App.`
+  const ownerBody = addressLabel.startsWith("Ubicación exacta no disponible")
+    ? `Un vecino compartió la ubicación de ${pet.name}: ${addressLabel}`
     : `¡${pet.name} fue encontrada! Está cerca de ${addressLabel}.`;
-
-  const speechAlert = addressLabel.includes("Mar del Plata Centro")
-    ? `Atención. ${pet.name} fue reportada en Mar del Plata. Abrí Honey App para ver el mapa.`
-    : `Atención. ${pet.name} fue encontrada cerca de ${addressLabel}.`;
 
   void notifyOwnerOfPetEvent(pet.userId, {
     type: "gps_scan",
@@ -230,7 +226,7 @@ export async function registerScan(
     sessionId: meta.sessionId,
     addressLabel,
     body: ownerBody,
-    speechAlert,
+    autoOpenChat: true,
   });
 
   return {

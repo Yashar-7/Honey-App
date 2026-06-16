@@ -1,4 +1,8 @@
 import { Prisma } from "@prisma/client";
+import {
+  formatLocationReference,
+  formatUnavailableLocation,
+} from "../lib/geocoding";
 import { prisma } from "../lib/prisma";
 import {
   getSafePointsNear,
@@ -42,19 +46,22 @@ function toIso(date: Date): string {
 }
 
 function scanToReport(scan: WarRoomScan): WarRoomReport {
+  const lat = scan.latitude.toNumber();
+  const lng = scan.longitude.toNumber();
   const address =
-    scan.addressLabel?.trim() || "Zona: Mar del Plata Centro";
+    scan.addressLabel?.trim() ||
+    formatUnavailableLocation(lat, lng);
 
   return {
     id: `scan-${scan.id}`,
     type: "gps",
     petId: scan.petId,
     petName: scan.pet.name,
-    latitude: scan.latitude.toNumber(),
-    longitude: scan.longitude.toNumber(),
+    latitude: lat,
+    longitude: lng,
     accuracy: scan.accuracy,
     text: null,
-    locationReference: `📍 ${address}`,
+    locationReference: formatLocationReference(address),
     imageUrl: null,
     sessionId: null,
     createdAt: toIso(scan.scannedAt),
@@ -202,7 +209,10 @@ export async function getOwnerWarRoom(userId: string, since?: Date) {
     prisma.message.findMany({
       where: {
         sender: "finder",
-        session: { petId: { in: lostPetIds } },
+        session: {
+          status: "open",
+          petId: { in: lostPetIds },
+        },
         ...(since ? { createdAt: { gt: since } } : {}),
       },
       take: since ? 100 : 50,

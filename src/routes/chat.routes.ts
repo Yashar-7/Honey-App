@@ -8,6 +8,7 @@ import {
   getSessionMessages,
   markPetAsReturned,
   replySessionMessage,
+  resolveCaseByOwner,
   sendSessionMessage,
 } from "../services/chat.service";
 import { getPublicRealtimeConfig } from "../services/realtime.service";
@@ -95,6 +96,21 @@ chatRouter.post(
       const input = replyMessageSchema.parse(req.body);
       const result = await replySessionMessage(sessionId, userId, input);
       res.status(201).json(result);
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+chatRouter.post(
+  "/sessions/:sessionId/resolve",
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req as AuthenticatedRequest;
+      const sessionId = String(req.params.sessionId);
+      const result = await resolveCaseByOwner(sessionId, userId);
+      res.json(result);
     } catch (err) {
       next(err);
     }

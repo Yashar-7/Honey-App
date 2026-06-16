@@ -219,10 +219,10 @@ export async function sendSessionMessage(
     sessionId: session.id,
     petName: session.pet.name,
     body: buildChatNotifyBody(message),
+    autoOpenChat: true,
     ...(message.locationReference
       ? {
           addressLabel: message.locationReference.replace(/^📍\s*/, ""),
-          speechAlert: `Atención. Un vecino compartió la ubicación de ${session.pet.name} cerca de ${message.locationReference.replace(/^📍\s*/, "")}.`,
         }
       : {}),
   });
@@ -316,5 +316,71 @@ export async function markPetAsReturned(sessionId: string) {
     message: "¡Gracias por ayudar! Sumaste reputación de rescatista.",
     finder: finderBadge,
     returnedAt: now.toISOString(),
+  };
+}
+
+/** Dueño marca el caso como resuelto: cierra sesión y desactiva modo alerta. */
+export async function resolveCaseByOwner(sessionId: string, userId: string) {
+  const session = await prisma.contactSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      status: true,
+      pet: {
+        select: {
+          id: true,
+          name: true,
+          userId: true,
+          isLost: true,
+        },
+      },
+    },
+  });
+
+  if (!session) {
+    throw new AppError(404, "Sesión de contacto no encontrada");
+  }
+
+  if (session.pet.userId !== userId) {
+    throw new AppError(403, "No tenés permiso para cerrar este caso");
+  }
+
+  if (session.status === "closed") {
+    return {
+      success: true,
+      alreadyResolved: true,
+      message: "Este caso ya estaba marcado como resuelto",
+      petId: session.pet.id,
+      petName: session.pet.name,
+    };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.contactSession.update({
+      where: { id: session.id },
+      data: { status: "closed" },
+    });
+
+    if (session.pet.isLost) {
+      await tx.pet.update({
+        where: { id: session.pet.id },
+        data: { isLost: false },
+      });
+    }
+  });
+
+  void notifyOwnerOfPetEvent(userId, {
+    type: "case_resolved",
+    petId: session.pet.id,
+    sessionId: session.id,
+    petName: session.pet.name,
+    body: `Caso de ${session.pet.name} marcado como resuelto.`,
+  });
+
+  return {
+    success: true,
+    message: `Caso de ${session.pet.name} marcado como resuelto`,
+    petId: session.pet.id,
+    petName: session.pet.name,
   };
 }

@@ -1,5 +1,4 @@
-/** Dirección legible por defecto solo si falla la API de Google. */
-export const GEOCODING_FALLBACK_ADDRESS = "Zona: Mar del Plata Centro";
+const UNAVAILABLE_LABEL = "Ubicación exacta no disponible";
 
 type GeocodeAddressComponent = {
   long_name: string;
@@ -25,10 +24,11 @@ export type ReverseGeocodeResult = {
 
 /** Resuelve la API key: Maps_API_KEY (Honey App) → GOOGLE_MAPS_API_KEY → MAPS_API_KEY */
 export function resolveMapsApiKey(): string | undefined {
+  const env = process.env as Record<string, string | undefined>;
   return (
-    process.env.Maps_API_KEY?.trim() ||
-    process.env.GOOGLE_MAPS_API_KEY?.trim() ||
-    process.env.MAPS_API_KEY?.trim() ||
+    env.Maps_API_KEY?.trim() ||
+    env.MAPS_API_KEY?.trim() ||
+    env.GOOGLE_MAPS_API_KEY?.trim() ||
     undefined
   );
 }
@@ -43,8 +43,31 @@ function pickComponent(
   return match?.long_name?.trim() ?? "";
 }
 
+function hasStreetAddress(result: GeocodeResult): boolean {
+  const components = result.address_components ?? [];
+  const route = pickComponent(components, "route");
+  const streetNumber = pickComponent(components, "street_number");
+  return Boolean(route || streetNumber);
+}
+
+/** Coordenadas legibles para humanos (ej. -38.00550, -57.54260). */
+export function formatReadableCoordinates(
+  latitude: number,
+  longitude: number,
+): string {
+  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+}
+
+/** Etiqueta cuando Google no devuelve calle exacta o la API falla. */
+export function formatUnavailableLocation(
+  latitude: number,
+  longitude: number,
+): string {
+  return `${UNAVAILABLE_LABEL} · ${formatReadableCoordinates(latitude, longitude)}`;
+}
+
 /** Formato humano: "Calle Altura, Localidad" (ej. Av. Colón 1200, Mar del Plata). */
-export function formatGeocodeResult(result: GeocodeResult): string {
+export function formatGeocodeResult(result: GeocodeResult): string | null {
   const components = result.address_components ?? [];
   const route = pickComponent(components, "route");
   const streetNumber = pickComponent(components, "street_number");
@@ -59,18 +82,32 @@ export function formatGeocodeResult(result: GeocodeResult): string {
   if (streetLine && locality) return `${streetLine}, ${locality}`;
   if (streetLine) return streetLine;
 
-  if (result.formatted_address?.trim()) {
+  if (hasStreetAddress(result) && result.formatted_address?.trim()) {
     return result.formatted_address.split(",").slice(0, 2).join(",").trim();
   }
 
-  return GEOCODING_FALLBACK_ADDRESS;
+  return null;
 }
 
 export function formatLocationReference(addressLabel: string): string {
   const clean = addressLabel.trim();
-  if (!clean) return `📍 ${GEOCODING_FALLBACK_ADDRESS}`;
+  if (!clean) return "📍 Ubicación compartida";
   if (clean.startsWith("📍")) return clean;
   return `📍 ${clean}`;
+}
+
+function pickBestGeocodeResult(results: GeocodeResult[]): string | null {
+  for (const result of results) {
+    const formatted = formatGeocodeResult(result);
+    if (formatted) return formatted;
+  }
+
+  const first = results[0]?.formatted_address?.trim();
+  if (first) {
+    return first.split(",").slice(0, 2).join(",").trim();
+  }
+
+  return null;
 }
 
 /**
@@ -83,10 +120,11 @@ export async function reverseGeocodeAddress(
   const apiKey = resolveMapsApiKey();
 
   if (!apiKey) {
-    console.warn(
-      "[geocoding] Maps_API_KEY no configurada — usando fallback de zona",
-    );
-    return { addressLabel: GEOCODING_FALLBACK_ADDRESS, fromGeocoder: false };
+    console.warn("[geocoding] Maps_API_KEY no configurada en .env");
+    return {
+      addressLabel: formatUnavailableLocation(latitude, longitude),
+      fromGeocoder: false,
+    };
   }
 
   try {
@@ -95,9 +133,13 @@ export async function reverseGeocodeAddress(
     url.searchParams.set("key", apiKey);
     url.searchParams.set("language", "es");
     url.searchParams.set("region", "ar");
+    url.searchParams.set(
+      "result_type",
+      "street_address|route|intersection|premise|subpremise",
+    );
 
     const response = await fetch(url.toString(), {
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(10000),
     });
 
     if (!response.ok) {
@@ -110,17 +152,23 @@ export async function reverseGeocodeAddress(
       throw new Error(data.error_message || `status=${data.status}`);
     }
 
-    const addressLabel = formatGeocodeResult(data.results[0]);
-    if (addressLabel === GEOCODING_FALLBACK_ADDRESS) {
-      return { addressLabel, fromGeocoder: false };
+    const streetAddress = pickBestGeocodeResult(data.results);
+    if (streetAddress) {
+      return { addressLabel: streetAddress, fromGeocoder: true };
     }
 
-    return { addressLabel, fromGeocoder: true };
+    return {
+      addressLabel: formatUnavailableLocation(latitude, longitude),
+      fromGeocoder: false,
+    };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.warn(
       `[geocoding] Falló reverse geocoding (${latitude}, ${longitude}): ${detail}`,
     );
-    return { addressLabel: GEOCODING_FALLBACK_ADDRESS, fromGeocoder: false };
+    return {
+      addressLabel: formatUnavailableLocation(latitude, longitude),
+      fromGeocoder: false,
+    };
   }
 }
