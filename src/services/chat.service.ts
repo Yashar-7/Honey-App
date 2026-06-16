@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { formatLocationReference } from "../lib/geocoding";
 import { prisma } from "../lib/prisma";
 import { AppError } from "../middleware/errorHandler";
 import {
@@ -6,6 +7,7 @@ import {
   MESSAGE_SENDER,
   ReplyMessageInput,
 } from "../schemas/message.schema";
+import { broadcastChatSessionUpdate } from "./realtime.service";
 import { notifyOwnerOfPetEvent } from "./ownerNotify.service";
 import { awardReturnReputation, getRescuerReputation } from "./rescuer.service";
 
@@ -68,9 +70,75 @@ function buildChatNotifyBody(message: {
 }): string {
   const parts: string[] = [];
   if (message.text) parts.push(message.text);
-  if (message.locationReference) parts.push(message.locationReference);
+  if (message.locationReference) {
+    parts.push(message.locationReference.replace(/^📍\s*/, "Ubicación: "));
+  }
   if (message.imageUrl) parts.push("Foto adjunta");
   return parts.join(" · ") || "Nuevo mensaje de un vecino";
+}
+
+async function publishChatUpdate(
+  sessionId: string,
+  message: {
+    id: string;
+    sender: string;
+    createdAt: Date;
+  },
+) {
+  void broadcastChatSessionUpdate(sessionId, {
+    type: "new_message",
+    messageId: message.id,
+    sender: message.sender,
+    createdAt: message.createdAt.toISOString(),
+  });
+}
+
+export function getChatSessionRealtimeConfig(sessionId: string) {
+  return {
+    channel: `chat-session:${sessionId}`,
+    event: "chat_update",
+  };
+}
+
+/** Registra ubicación legible en el chat (sin duplicar push GPS). */
+export async function appendLocationReferenceMessage(
+  sessionId: string,
+  addressLabel: string,
+) {
+  const session = await prisma.contactSession.findUnique({
+    where: { id: sessionId },
+    select: {
+      id: true,
+      status: true,
+      expiresAt: true,
+      pet: {
+        select: { id: true, isActive: true },
+      },
+    },
+  });
+
+  if (
+    !session ||
+    session.status !== "open" ||
+    session.expiresAt <= new Date() ||
+    !session.pet.isActive
+  ) {
+    return null;
+  }
+
+  const locationReference = formatLocationReference(addressLabel);
+
+  const message = await prisma.message.create({
+    data: {
+      sessionId: session.id,
+      sender: MESSAGE_SENDER.FINDER,
+      locationReference,
+    },
+    select: MESSAGE_SELECT,
+  });
+
+  void publishChatUpdate(session.id, message);
+  return message;
 }
 
 async function getReadableSession(sessionId: string): Promise<SessionWithPet> {
@@ -151,7 +219,15 @@ export async function sendSessionMessage(
     sessionId: session.id,
     petName: session.pet.name,
     body: buildChatNotifyBody(message),
+    ...(message.locationReference
+      ? {
+          addressLabel: message.locationReference.replace(/^📍\s*/, ""),
+          speechAlert: `Atención. Un vecino compartió la ubicación de ${session.pet.name} cerca de ${message.locationReference.replace(/^📍\s*/, "")}.`,
+        }
+      : {}),
   });
+
+  void publishChatUpdate(session.id, message);
 
   return {
     success: true,
@@ -179,6 +255,8 @@ export async function replySessionMessage(
     },
     select: MESSAGE_SELECT,
   });
+
+  void publishChatUpdate(session.id, message);
 
   return {
     message: "Respuesta enviada al vecino correctamente",

@@ -1,4 +1,4 @@
-/** Dirección legible por defecto si falla Google Geocoding o no hay API key. */
+/** Dirección legible por defecto solo si falla la API de Google. */
 export const GEOCODING_FALLBACK_ADDRESS = "Zona: Mar del Plata Centro";
 
 type GeocodeAddressComponent = {
@@ -23,6 +23,16 @@ export type ReverseGeocodeResult = {
   fromGeocoder: boolean;
 };
 
+/** Resuelve la API key: Maps_API_KEY (Honey App) → GOOGLE_MAPS_API_KEY → MAPS_API_KEY */
+export function resolveMapsApiKey(): string | undefined {
+  return (
+    process.env.Maps_API_KEY?.trim() ||
+    process.env.GOOGLE_MAPS_API_KEY?.trim() ||
+    process.env.MAPS_API_KEY?.trim() ||
+    undefined
+  );
+}
+
 function pickComponent(
   components: GeocodeAddressComponent[],
   ...types: string[]
@@ -33,7 +43,7 @@ function pickComponent(
   return match?.long_name?.trim() ?? "";
 }
 
-/** Formato humano: "Calle + Altura, Localidad" (ej. Av. Colón 1200, Mar del Plata). */
+/** Formato humano: "Calle Altura, Localidad" (ej. Av. Colón 1200, Mar del Plata). */
 export function formatGeocodeResult(result: GeocodeResult): string {
   const components = result.address_components ?? [];
   const route = pickComponent(components, "route");
@@ -56,19 +66,25 @@ export function formatGeocodeResult(result: GeocodeResult): string {
   return GEOCODING_FALLBACK_ADDRESS;
 }
 
+export function formatLocationReference(addressLabel: string): string {
+  const clean = addressLabel.trim();
+  if (!clean) return `📍 ${GEOCODING_FALLBACK_ADDRESS}`;
+  if (clean.startsWith("📍")) return clean;
+  return `📍 ${clean}`;
+}
+
 /**
  * Convierte coordenadas GPS en dirección legible vía Google Maps Geocoding API.
- * Requiere GOOGLE_MAPS_API_KEY en el servidor.
  */
 export async function reverseGeocodeAddress(
   latitude: number,
   longitude: number,
 ): Promise<ReverseGeocodeResult> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
+  const apiKey = resolveMapsApiKey();
 
   if (!apiKey) {
     console.warn(
-      "[geocoding] GOOGLE_MAPS_API_KEY no configurada — usando fallback",
+      "[geocoding] Maps_API_KEY no configurada — usando fallback de zona",
     );
     return { addressLabel: GEOCODING_FALLBACK_ADDRESS, fromGeocoder: false };
   }
@@ -95,6 +111,10 @@ export async function reverseGeocodeAddress(
     }
 
     const addressLabel = formatGeocodeResult(data.results[0]);
+    if (addressLabel === GEOCODING_FALLBACK_ADDRESS) {
+      return { addressLabel, fromGeocoder: false };
+    }
+
     return { addressLabel, fromGeocoder: true };
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);

@@ -3,12 +3,41 @@ import { requireAuth } from "../middleware/auth.middleware";
 import { uploadMessageImage } from "../middleware/upload.middleware";
 import { AppError } from "../middleware/errorHandler";
 import { parseCreateMessageInput, replyMessageSchema } from "../schemas/message.schema";
-import { getSessionMessages, markPetAsReturned, replySessionMessage, sendSessionMessage } from "../services/chat.service";
+import {
+  getChatSessionRealtimeConfig,
+  getSessionMessages,
+  markPetAsReturned,
+  replySessionMessage,
+  sendSessionMessage,
+} from "../services/chat.service";
+import { getPublicRealtimeConfig } from "../services/realtime.service";
 import { AuthenticatedRequest } from "../types/express";
 import { uploadToSupabase } from "../lib/supabase";
 import { buildUniqueImageFileName } from "../middleware/upload.middleware";
 
 export const chatRouter = Router();
+
+chatRouter.get("/sessions/:sessionId/realtime-config", async (req, res, next) => {
+  try {
+    const sessionId = String(req.params.sessionId);
+    await getSessionMessages(sessionId);
+
+    const realtime = getPublicRealtimeConfig();
+    if (!realtime) {
+      throw new AppError(
+        503,
+        "Realtime no configurado (SUPABASE_URL / SUPABASE_ANON_KEY)",
+      );
+    }
+
+    res.json({
+      ...realtime,
+      ...getChatSessionRealtimeConfig(sessionId),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // RUTA GET
 chatRouter.get("/sessions/:sessionId/messages", async (req: Request, res: Response, next: NextFunction) => {

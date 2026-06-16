@@ -292,10 +292,41 @@
         let selectedPetId = null;
         let activeChatSessionId = null;
         let chatPollTimer = null;
+        let chatRealtimeChannel = null;
+        let chatRealtimeConnected = false;
+        let lastVoiceAlertAt = 0;
         let communityWallPainted = false;
         let lastAlertsFingerprint = "";
         let lastPetsFingerprint = "";
         let lastMapRenderKey = "";
+
+        function playSecurityVoiceAlert(text) {
+            if (!text || !window.speechSynthesis) return;
+            const now = Date.now();
+            if (now - lastVoiceAlertAt < 9000) return;
+            lastVoiceAlertAt = now;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = "es-AR";
+            utter.rate = 0.92;
+            utter.pitch = 1;
+            window.speechSynthesis.speak(utter);
+        }
+
+        function handleWarRoomRealtimePayload(payload) {
+            const event = payload?.payload ?? payload;
+            if (event?.speechAlert) {
+                playSecurityVoiceAlert(event.speechAlert);
+            }
+            if (
+                event?.sessionId &&
+                activeChatSessionId &&
+                event.sessionId === activeChatSessionId
+            ) {
+                void loadChatMessages();
+            }
+            void poll();
+        }
 
         const state = { pets: [], reports: [], activeChats: [], safePoints: [], mode: "owner" };
 
@@ -684,9 +715,7 @@
 
                 realtimeChannel = client
                     .channel(config.channel, { config: { broadcast: { self: false } } })
-                    .on("broadcast", { event: "war_room_update" }, () => {
-                        void poll();
-                    })
+                    .on("broadcast", { event: "war_room_update" }, handleWarRoomRealtimePayload)
                     .subscribe((status) => {
                         realtimeConnected = status === "SUBSCRIBED";
                         configurePolling();
@@ -1106,9 +1135,13 @@
             }
             box.innerHTML = messages.map((m) => {
                 const isOwner = m.sender === "owner";
+                const locationHtml = m.locationReference
+                    ? `<p class="text-[#ffc107] font-bold text-xs mt-1 leading-snug">${escapeHtml(m.locationReference)}</p>`
+                    : "";
                 return `<div class="flex ${isOwner ? "justify-end" : "justify-start"}">
-                    <div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm ${isOwner ? "bg-[#d97706]/30 text-[#f8fafc] border border-[#d97706]/40" : "bg-slate-700 text-slate-200 border border-slate-600"}">
+                    <div class="max-w-[85%] rounded-2xl px-3 py-2 text-sm ${isOwner ? "bg-[#d97706]/30 text-[#f8fafc] border border-[#d97706]/40" : "bg-slate-700 text-slate-200 border border-slate-600"}${m.locationReference ? " border-[#ffc107]/35" : ""}">
                         <p class="text-[10px] opacity-70 mb-0.5">${isOwner ? "Vos (dueño)" : "Colaborador anónimo"}</p>
+                        ${locationHtml}
                         ${m.text ? `<p>${escapeHtml(m.text)}</p>` : ""}
                         ${m.imageUrl ? `<img src="${m.imageUrl}" class="mt-1 rounded-lg max-h-24" alt="">` : ""}
                     </div>
@@ -1149,6 +1182,46 @@
             }
         }
 
+        async function teardownChatRealtime() {
+            if (chatRealtimeChannel) {
+                try {
+                    await chatRealtimeChannel.unsubscribe();
+                } catch { /* noop */ }
+                chatRealtimeChannel = null;
+            }
+            chatRealtimeConnected = false;
+        }
+
+        async function setupChatRealtime(sessionId) {
+            if (!sessionId || !window.supabase?.createClient) return;
+
+            try {
+                await teardownChatRealtime();
+                const config = await api(`/api/chat/sessions/${sessionId}/realtime-config`);
+                const client = window.supabase.createClient(
+                    config.supabaseUrl,
+                    config.supabaseAnonKey,
+                );
+
+                chatRealtimeChannel = client
+                    .channel(config.channel, { config: { broadcast: { self: false } } })
+                    .on("broadcast", { event: config.event || "chat_update" }, () => {
+                        void loadChatMessages();
+                    })
+                    .subscribe((status) => {
+                        chatRealtimeConnected = status === "SUBSCRIBED";
+                        if (chatPollTimer) clearInterval(chatPollTimer);
+                        chatPollTimer = setInterval(
+                            loadChatMessages,
+                            chatRealtimeConnected ? 4500 : 1500,
+                        );
+                    });
+            } catch (err) {
+                console.warn("[chat-realtime]", err.message);
+                chatRealtimeConnected = false;
+            }
+        }
+
         function openSecureChat(sessionId, petName) {
             activeChatSessionId = sessionId;
             $("chat-modal-sub").dataset.petName = petName || "Mascota";
@@ -1156,7 +1229,8 @@
             $("chat-modal").classList.add("is-open");
             loadChatMessages();
             if (chatPollTimer) clearInterval(chatPollTimer);
-            chatPollTimer = setInterval(loadChatMessages, 2500);
+            chatPollTimer = setInterval(loadChatMessages, 1500);
+            void setupChatRealtime(sessionId);
         }
 
         function closeSecureChat() {
@@ -1166,6 +1240,7 @@
                 clearInterval(chatPollTimer);
                 chatPollTimer = null;
             }
+            void teardownChatRealtime();
         }
 
         function mergeWarRoom(data) {
@@ -1185,6 +1260,15 @@
                     if (!knownReportIds.has(report.id)) {
                         newIds.add(report.id);
                         knownReportIds.add(report.id);
+                        if (
+                            report.type === "gps" &&
+                            report.locationReference
+                        ) {
+                            const addr = report.locationReference.replace(/^📍\s*/, "");
+                            playSecurityVoiceAlert(
+                                `Atención. ${report.petName} fue encontrada cerca de ${addr}.`,
+                            );
+                        }
                     }
                     reportMap.set(report.id, report);
                 }

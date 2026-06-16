@@ -10,6 +10,7 @@ import {
 import { resolveQrToken } from "../lib/qrToken";
 import { AppError } from "../middleware/errorHandler";
 import { CreateScanInput } from "../schemas/scan.schema";
+import { appendLocationReferenceMessage } from "./chat.service";
 import { notifyOwnerOfPetEvent } from "./ownerNotify.service";
 
 export type QrVisitorMeta = {
@@ -151,7 +152,7 @@ export async function getPetByQrToken(
 export async function registerScan(
   token: string,
   input: CreateScanInput,
-  meta: { ipAddress?: string; userAgent?: string },
+  meta: { ipAddress?: string; userAgent?: string; sessionId?: string },
 ) {
   const resolved = await resolveQrToken(token);
 
@@ -210,11 +211,26 @@ export async function registerScan(
     `[scan] GPS registrado · ${pet.name} · ${addressLabel} (${input.latitude.toFixed(5)}, ${input.longitude.toFixed(5)})`,
   );
 
+  if (meta.sessionId) {
+    await appendLocationReferenceMessage(meta.sessionId, addressLabel);
+  }
+
+  const ownerBody = addressLabel.includes("Mar del Plata Centro")
+    ? `Un vecino compartió la ubicación de ${pet.name}. Revisá el mapa en Honey App.`
+    : `¡${pet.name} fue encontrada! Está cerca de ${addressLabel}.`;
+
+  const speechAlert = addressLabel.includes("Mar del Plata Centro")
+    ? `Atención. ${pet.name} fue reportada en Mar del Plata. Abrí Honey App para ver el mapa.`
+    : `Atención. ${pet.name} fue encontrada cerca de ${addressLabel}.`;
+
   void notifyOwnerOfPetEvent(pet.userId, {
     type: "gps_scan",
     petId: pet.id,
     petName: pet.name,
-    body: `Nuevo reporte cerca de ${addressLabel}`,
+    sessionId: meta.sessionId,
+    addressLabel,
+    body: ownerBody,
+    speechAlert,
   });
 
   return {

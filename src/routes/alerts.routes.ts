@@ -24,6 +24,7 @@ alertsRouter.post("/", async (req, res, next) => {
       {
         ipAddress: req.ip,
         userAgent: req.get("user-agent") ?? undefined,
+        sessionId: body.sessionId,
       },
     );
 

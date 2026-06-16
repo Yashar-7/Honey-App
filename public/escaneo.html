@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Honey App — Ayudá a esta mascota</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -153,7 +154,8 @@
     <script>
         const params = new URLSearchParams(window.location.search);
         const QR_TOKEN = params.get("token")?.trim() || "";
-        const POLL_MS = 2500;
+        const POLL_MS_LIVE = 1500;
+        const POLL_MS_RT = 4500;
         const SESSION_STORAGE_PREFIX = "honey_finder_chat_";
 
         const FORBIDDEN_KEYS = ["phone", "whatsapp", "telefono", "tel", "mobile", "celular", "email"];
@@ -171,6 +173,9 @@
             finderBadge: null,
             returnedAt: null,
         };
+
+        let chatRealtimeChannel = null;
+        let chatRealtimeConnected = false;
 
         const $ = (id) => document.getElementById(id);
 
@@ -387,15 +392,21 @@
                 const align = isOwner ? "chat-msg--owner" : "chat-msg--finder";
                 const bubble = isOwner ? "bubble-owner" : "bubble-finder";
                 const label = isOwner ? "Dueño (anónimo)" : "Vos";
-                const text = m.text || m.locationReference || "";
                 const img = m.imageUrl
                     ? `<img src="${escapeHtml(m.imageUrl)}" alt="Adjunto" class="chat-bubble__img">`
                     : "";
+                const locationHtml = m.locationReference
+                    ? `<p class="chat-bubble__location"><span class="chat-bubble__pin" aria-hidden="true">📍</span> ${escapeHtml(m.locationReference.replace(/^📍\s*/, ""))}</p>`
+                    : "";
+                const textHtml = m.text
+                    ? `<p class="chat-bubble__text">${escapeHtml(m.text)}</p>`
+                    : "";
 
                 return `<div class="chat-msg ${align}">
-                    <div class="chat-bubble ${bubble}">
+                    <div class="chat-bubble ${bubble}${m.locationReference ? " chat-bubble--location" : ""}">
                         <p class="chat-bubble__label">${label}</p>
-                        ${text ? `<p class="chat-bubble__text">${escapeHtml(text)}</p>` : ""}
+                        ${locationHtml}
+                        ${textHtml}
                         ${img}
                         <time class="chat-bubble__time">${formatMessageTime(m.createdAt)}</time>
                     </div>
@@ -440,7 +451,52 @@
 
         function startPolling() {
             stopPolling();
-            state.pollTimer = setInterval(pollMessages, POLL_MS);
+            const ms = chatRealtimeConnected ? POLL_MS_RT : POLL_MS_LIVE;
+            state.pollTimer = setInterval(pollMessages, ms);
+        }
+
+        async function teardownChatRealtime() {
+            if (chatRealtimeChannel) {
+                try {
+                    await chatRealtimeChannel.unsubscribe();
+                } catch { /* noop */ }
+                chatRealtimeChannel = null;
+            }
+            chatRealtimeConnected = false;
+        }
+
+        async function setupChatRealtime() {
+            if (!state.sessionId || !window.supabase?.createClient) return;
+
+            try {
+                await teardownChatRealtime();
+                const res = await fetch(
+                    `/api/chat/sessions/${encodeURIComponent(state.sessionId)}/realtime-config`,
+                );
+                const config = await res.json().catch(() => ({}));
+                if (!res.ok || !config.supabaseUrl) {
+                    startPolling();
+                    return;
+                }
+
+                const client = window.supabase.createClient(
+                    config.supabaseUrl,
+                    config.supabaseAnonKey,
+                );
+
+                chatRealtimeChannel = client
+                    .channel(config.channel, { config: { broadcast: { self: false } } })
+                    .on("broadcast", { event: config.event || "chat_update" }, () => {
+                        void pollMessages();
+                    })
+                    .subscribe((status) => {
+                        chatRealtimeConnected = status === "SUBSCRIBED";
+                        startPolling();
+                    });
+            } catch (err) {
+                console.warn("[chat-realtime]", err.message);
+                startPolling();
+            }
         }
 
         function stopPolling() {
@@ -521,7 +577,7 @@
             state.chatActive = true;
             persistSession();
             showChatView(skipAnimation);
-            startPolling();
+            void setupChatRealtime();
             pollMessages();
             setTimeout(() => {
                 $("chat-input")?.focus({ preventScroll: true });
@@ -538,6 +594,7 @@
             state.chatActive = false;
             persistSession();
             stopPolling();
+            void teardownChatRealtime();
             showFichaView();
         }
 
@@ -671,6 +728,7 @@
             try {
                 const payload = { qrToken: QR_TOKEN, latitude, longitude };
                 if (accuracy != null) payload.accuracy = accuracy;
+                if (state.sessionId) payload.sessionId = state.sessionId;
 
                 const res = await fetch("/api/alerts", {
                     method: "POST",
@@ -689,9 +747,13 @@
                     data.scan?.addressLabel ||
                     "Zona: Mar del Plata Centro";
 
-                await sendChatMessage({
-                    locationReference: `📍 ${addressLabel}`,
-                });
+                showStatus(`Ubicación enviada · ${addressLabel}`, "success");
+
+                if (state.sessionId && !state.chatActive) {
+                    openChatUI(true);
+                } else {
+                    await pollMessages();
+                }
 
                 btn.textContent = "✓";
                 btn.classList.add("btn-icon--sent");
