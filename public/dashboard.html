@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="/js/supabase-client.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
         body { font-family: 'Nunito', sans-serif; background: var(--honey-bg); color: var(--honey-text-muted); -webkit-tap-highlight-color: transparent; }
@@ -730,13 +731,13 @@
         }
 
         async function setupRealtime() {
-            if (!window.supabase?.createClient) return;
+            if (!window.HoneyAppSupabase?.isAvailable()) return;
 
             try {
                 const config = await api("/api/owner/realtime-config");
                 await teardownRealtime();
 
-                const client = window.supabase.createClient(
+                const client = window.HoneyAppSupabase.getClient(
                     config.supabaseUrl,
                     config.supabaseAnonKey,
                 );
@@ -1221,12 +1222,12 @@
         }
 
         async function setupChatRealtime(sessionId) {
-            if (!sessionId || !window.supabase?.createClient) return;
+            if (!sessionId || !window.HoneyAppSupabase?.isAvailable()) return;
 
             try {
                 await teardownChatRealtime();
                 const config = await api(`/api/chat/sessions/${sessionId}/realtime-config`);
-                const client = window.supabase.createClient(
+                const client = window.HoneyAppSupabase.getClient(
                     config.supabaseUrl,
                     config.supabaseAnonKey,
                 );

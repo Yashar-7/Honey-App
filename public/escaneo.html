@@ -6,6 +6,7 @@
     <title>Honey App — Ayudá a esta mascota</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="/js/supabase-client.js"></script>
 </head>
 <body>
 
@@ -466,7 +467,7 @@
         }
 
         async function setupChatRealtime() {
-            if (!state.sessionId || !window.supabase?.createClient) return;
+            if (!state.sessionId || !window.HoneyAppSupabase?.isAvailable()) return;
 
             try {
                 await teardownChatRealtime();
@@ -479,7 +480,7 @@
                     return;
                 }
 
-                const client = window.supabase.createClient(
+                const client = window.HoneyAppSupabase.getClient(
                     config.supabaseUrl,
                     config.supabaseAnonKey,
                 );

@@ -1,6 +1,19 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { AppError } from "../middleware/errorHandler";
 
+/** Clave de almacenamiento compartida con public/js/supabase-client.js (navegador). */
+export const SUPABASE_BROWSER_AUTH_STORAGE_KEY = "honey-app-supabase-auth";
+
+/** Opciones del cliente anon en el navegador (realtime + sesión persistente). */
+export const SUPABASE_BROWSER_CLIENT_OPTIONS = {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+    storageKey: SUPABASE_BROWSER_AUTH_STORAGE_KEY,
+  },
+} as const;
+
 let adminClient: SupabaseClient | null = null;
 
 function readSupabaseEnv(): { url: string; serviceRoleKey: string } {
@@ -17,7 +30,7 @@ function readSupabaseEnv(): { url: string; serviceRoleKey: string } {
   return { url, serviceRoleKey };
 }
 
-/** Cliente admin (service role). Solo usar en el servidor. */
+/** Cliente admin (service role). Singleton — solo usar en el servidor. */
 export function getSupabaseAdmin(): SupabaseClient {
   if (!adminClient) {
     const { url, serviceRoleKey } = readSupabaseEnv();
