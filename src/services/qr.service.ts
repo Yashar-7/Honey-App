@@ -177,7 +177,7 @@ export async function registerScan(
     throw new AppError(404, "Token QR no encontrado");
   }
 
-  const { addressLabel } = await reverseGeocodeAddress(
+  const { addressLabel, fromGeocoder, debug: geocodeDebug } = await reverseGeocodeAddress(
     input.latitude,
     input.longitude,
   );
@@ -233,6 +233,8 @@ export async function registerScan(
     message: "Escaneo registrado correctamente",
     petName: pet.name,
     addressLabel,
+    fromGeocoder,
+    ...(geocodeDebug ? { geocodeDebug } : {}),
     scan,
     petLocation: {
       lastLat: input.latitude,
