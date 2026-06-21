@@ -39,6 +39,7 @@ export interface PetRegisterV2Props {
   authToken?: string;
   ownerName?: string;
   ownerEmail?: string;
+  stockSerial?: string;
   onLogout?: () => void;
   onExit?: () => void;
 }
@@ -60,6 +61,7 @@ export function PetRegisterV2({
   authToken: authTokenProp = "",
   ownerName: ownerNameProp = "Dueño",
   ownerEmail: ownerEmailProp = "",
+  stockSerial: stockSerialProp = "",
   onLogout,
   onExit,
 }: PetRegisterV2Props) {
@@ -94,6 +96,7 @@ export function PetRegisterV2({
   const [petShops, setPetShops] = useState<PetShopOption[]>([]);
   const [vetClinicId, setVetClinicId] = useState("");
   const [lastVaccinationDate, setLastVaccinationDate] = useState("");
+  const [stockSerial] = useState(stockSerialProp);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoPreviewRef = useRef<string | null>(null);
@@ -262,6 +265,7 @@ export function PetRegisterV2({
     formData.append("photo", photoFile);
     if (vetClinicId) formData.append("vetClinicId", vetClinicId);
     if (lastVaccinationDate) formData.append("lastVaccinationDate", lastVaccinationDate);
+    if (stockSerial) formData.append("stockSerial", stockSerial);
 
       const res = await fetch("/api/pets", {
         method: "POST",
@@ -420,6 +424,12 @@ export function PetRegisterV2({
         </div>
         <Progress value={stepProgress[step]} aria-label="Progreso del registro" />
       </div>
+
+      {stockSerial && step !== "success" && (
+        <div className="mx-1 rounded-xl border border-mustard/40 bg-mustard/10 px-4 py-3 text-center text-sm text-mustard">
+          Activando chapita <span className="font-mono font-bold">{stockSerial}</span>
+        </div>
+      )}
 
       <motion.article
         layout

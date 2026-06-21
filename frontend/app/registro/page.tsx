@@ -10,6 +10,7 @@ export default function RegistroPage() {
   const [authToken, setAuthToken] = useState("");
   const [ownerName, setOwnerName] = useState("Dueño");
   const [ownerEmail, setOwnerEmail] = useState("");
+  const [stockSerial, setStockSerial] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -19,12 +20,14 @@ export default function RegistroPage() {
       const params = new URLSearchParams(window.location.search);
       const forceRegister =
         params.get("modo") === "registro" || params.get("nueva") === "1";
+      const serialParam = (params.get("serial") || "").trim().toUpperCase();
 
       if (!token) {
         if (cancelled) return;
         setAuthToken("");
         setOwnerName("Dueño");
         setOwnerEmail("");
+        setStockSerial(serialParam);
         setReady(true);
         return;
       }
@@ -39,6 +42,7 @@ export default function RegistroPage() {
           setAuthToken("");
           setOwnerName("Dueño");
           setOwnerEmail("");
+          setStockSerial(serialParam);
           setReady(true);
           return;
         }
@@ -52,6 +56,7 @@ export default function RegistroPage() {
       setAuthToken(token);
       setOwnerName(sessionStorage.getItem(NAME_KEY) || "Dueño");
       setOwnerEmail(sessionStorage.getItem(EMAIL_KEY) || "");
+      setStockSerial(serialParam);
       setReady(true);
     }
 
@@ -75,6 +80,7 @@ export default function RegistroPage() {
         authToken={authToken}
         ownerName={ownerName}
         ownerEmail={ownerEmail}
+        stockSerial={stockSerial}
         onExit={() => {
           window.location.href = authToken ? "/dashboard" : "/";
         }}

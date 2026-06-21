@@ -1,10 +1,15 @@
 import type { Request } from "express";
 import { Prisma } from "@prisma/client";
-import { buildPetScanUrl } from "../lib/appUrl";
+import { buildPetScanUrl, resolvePublicBaseUrl } from "../lib/appUrl";
 import { prisma } from "../lib/prisma";
 import { generateQrToken } from "../lib/tokens";
 import { AppError } from "../middleware/errorHandler";
 import type { CreatePetInput } from "../schemas/pet.schema";
+import {
+  assertStockSerialAvailable,
+  markStockSerialUsed,
+  normalizeStockSerial,
+} from "./qrStock.service";
 
 const VACCINATION_REMINDER_MONTHS = 12;
 const DEWORMING_REMINDER_MONTHS = 3;
@@ -187,6 +192,7 @@ function buildPetCreateData(
   input: CreatePetInput,
   qrToken: string,
   photoUrl?: string,
+  stockSerial?: string,
 ): Prisma.PetUncheckedCreateInput {
   const nextReminderDate = computeNextReminderDate(
     input.lastVaccinationDate,
@@ -209,6 +215,7 @@ function buildPetCreateData(
     finderMessage: input.finderMessage,
     photoUrl,
     qrToken,
+    stockSerial: stockSerial ?? null,
     vetClinicId: input.vetClinicId ?? null,
     lastVaccinationDate: input.lastVaccinationDate ?? null,
     lastDewormingDate: input.lastDewormingDate ?? null,
@@ -220,26 +227,55 @@ function buildPetCreateData(
 export async function createPet(
   userId: string,
   input: CreatePetInput,
-  options?: { photoUrl?: string; req?: Pick<Request, "get" | "protocol"> },
+  options?: {
+    photoUrl?: string;
+    req?: Pick<Request, "get" | "protocol">;
+    stockSerial?: string;
+  },
 ) {
   await assertVetClinicExists(input.vetClinicId);
+
+  const stockSerial = options?.stockSerial
+    ? normalizeStockSerial(options.stockSerial)
+    : input.stockSerial
+      ? normalizeStockSerial(input.stockSerial)
+      : null;
+
+  if (stockSerial) {
+    await assertStockSerialAvailable(stockSerial);
+  }
+
   const qrToken = generateQrToken();
   const nextReminderDate = computeNextReminderDate(
     input.lastVaccinationDate,
     input.lastDewormingDate,
   );
 
-  const pet: CreatedPetWithHealth = await prisma.pet.create({
-    data: buildPetCreateData(userId, input, qrToken, options?.photoUrl),
+  let pet: CreatedPetWithHealth;
+  pet = await prisma.pet.create({
+    data: buildPetCreateData(userId, input, qrToken, options?.photoUrl, stockSerial ?? undefined),
     select: PET_CREATE_SELECT,
   });
 
-  const scanUrl = buildPetScanUrl(pet.qrToken, options?.req);
+  if (stockSerial) {
+    try {
+      await markStockSerialUsed(stockSerial);
+    } catch (err) {
+      await prisma.pet.delete({ where: { id: pet.id } }).catch(() => undefined);
+      throw err;
+    }
+  }
+
+  const scanUrl = stockSerial
+    ? `${resolvePublicBaseUrl(options?.req)}/activar?serial=${encodeURIComponent(stockSerial)}`
+    : buildPetScanUrl(pet.qrToken, options?.req);
 
   return {
-    message:
-      "Mascota registrada. El QR SVG está listo para enviar a la imprenta.",
+    message: stockSerial
+      ? "Chapita activada correctamente. Tu mascota ya está protegida."
+      : "Mascota registrada. El QR SVG está listo para enviar a la imprenta.",
     qrToken: pet.qrToken,
+    stockSerial: stockSerial ?? null,
     pet,
     scanUrl,
     qrSvgUrl: `/api/qr/generate/${pet.qrToken}`,

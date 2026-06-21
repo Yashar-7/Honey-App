@@ -11,6 +11,9 @@ import { ownerRouter } from "./routes/owner.routes";
 import { petsRouter } from "./routes/pets.routes";
 import { petShopsRouter } from "./routes/petShops.routes";
 import { qrRouter } from "./routes/qr.routes";
+import { qrStockRouter } from "./routes/qrStock.routes";
+import { prisma } from "./lib/prisma";
+import { lookupQrStock, normalizeStockSerial } from "./services/qrStock.service";
 
 const app = express();
 
@@ -88,6 +91,52 @@ app.get(["/registro-v2", "/registro-v2/"], (req, res) => {
   res.redirect(301, query ? `/registro${query}` : "/registro");
 });
 
+/**
+ * Activación de chapita física preimpresa (?serial=HNY-001).
+ * - Disponible → registro de mascota
+ * - Ya activada → escaneo vecino (redirige al token de la mascota)
+ */
+app.get("/activar", async (req, res, next) => {
+  try {
+    const rawSerial = req.query.serial;
+    const serial = normalizeStockSerial(
+      Array.isArray(rawSerial) ? rawSerial[0] : rawSerial,
+    );
+
+    if (!serial) {
+      sendPublicPage(res, "activar.html");
+      return;
+    }
+
+    const stock = await lookupQrStock(serial);
+    if (!stock) {
+      res.redirect(`/activar?error=invalid&serial=${encodeURIComponent(serial)}`);
+      return;
+    }
+
+    if (!stock.isUsed) {
+      res.redirect(
+        `/registro?serial=${encodeURIComponent(serial)}&modo=registro`,
+      );
+      return;
+    }
+
+    const pet = await prisma.pet.findFirst({
+      where: { stockSerial: serial, isActive: true },
+      select: { qrToken: true },
+    });
+
+    if (!pet) {
+      res.redirect(`/activar?error=orphan&serial=${encodeURIComponent(serial)}`);
+      return;
+    }
+
+    res.redirect(`/?token=${encodeURIComponent(pet.qrToken)}`);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.use(express.static(publicDir));
 app.use("/uploads", express.static(path.join(publicDir, "uploads")));
 
@@ -96,6 +145,7 @@ app.use((req, _res, next) => {
   const reqPath = req.path;
   const needsApiPrefix =
     reqPath.startsWith("/qr") ||
+    reqPath.startsWith("/qr-stock") ||
     reqPath.startsWith("/alerts") ||
     reqPath.startsWith("/chat") ||
     reqPath.startsWith("/auth") ||
@@ -113,6 +163,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/pets", petsRouter);
 app.use("/api/pet-shops", petShopsRouter);
 app.use("/api/qr", qrRouter);
+app.use("/api/qr-stock", qrStockRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/alerts", alertsRouter);
 app.use("/api/owner", ownerRouter);

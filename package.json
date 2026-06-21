@@ -18,7 +18,8 @@
     "seed": "tsx prisma/seed.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "generate:qrs": "node scripts/generate-qrs.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -52,7 +53,9 @@
     "@types/node": "^22.15.29",
     "@types/qrcode": "^1.5.6",
     "@types/web-push": "^3.6.4",
+    "pdf-lib": "^1.17.1",
     "prisma": "^6.19.3",
+    "sharp": "^0.34.5",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
