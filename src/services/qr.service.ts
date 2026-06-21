@@ -207,9 +207,7 @@ export async function registerScan(
     return createdScan;
   });
 
-  console.log(
-    `[scan] GPS registrado · ${pet.name} · ${addressLabel} (${input.latitude.toFixed(5)}, ${input.longitude.toFixed(5)})`,
-  );
+  console.log(`[scan] GPS registrado · petId=${pet.id}`);
 
   if (meta.sessionId) {
     await appendLocationReferenceMessage(meta.sessionId, addressLabel);

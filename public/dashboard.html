@@ -53,23 +53,7 @@
         .push-toggle { display: flex; align-items: center; gap: 0.65rem; padding: 0.75rem 1rem; border-radius: 1rem; border: 1px solid var(--accent-yellow-border); background: var(--accent-yellow-soft); cursor: pointer; }
         .push-toggle input { width: 1rem; height: 1rem; accent-color: var(--accent-yellow); }
         .push-toggle span { color: #fbbf24; font-size: 0.875rem; font-weight: 700; }
-        .community-mode #alerts-feed { background: linear-gradient(180deg, rgba(30,41,59,0.5) 0%, rgba(15,23,42,0.3) 100%); }
-        .community-stats { background: linear-gradient(135deg, #1e293b 0%, #243044 50%, #1a2744 100%); border: 1px solid rgba(148,163,184,0.2); }
-        .community-card { background: #243044; border: 1px solid #475569; transition: border-color 0.2s, transform 0.2s; }
-        .community-card:hover { border-color: var(--accent-yellow-border); }
-        .community-card-img { object-fit: cover; }
-        .stat-pill { background: rgba(15,23,42,0.6); border: 1px solid rgba(100,116,139,0.35); }
-        .community-tag { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
-        .community-tag--info { background: rgba(56,189,248,0.12); color: #7dd3fc; border-color: rgba(56,189,248,0.3); }
-        .community-tag--warm { background: var(--accent-yellow-soft); color: #fbbf24; border-color: var(--accent-yellow-border); }
-        @keyframes communityFadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-        .community-animate { animation: communityFadeIn 0.45s ease-out backwards; }
-        .community-animate:nth-child(2) { animation-delay: 0.06s; }
-        .community-animate:nth-child(3) { animation-delay: 0.12s; }
-        .community-animate:nth-child(4) { animation-delay: 0.18s; }
-        .community-animate:nth-child(5) { animation-delay: 0.24s; }
-        .btn-community-soft { min-height: 40px; background: rgba(148,163,184,0.1); border: 1px solid rgba(148,163,184,0.35); color: #cbd5e1; transition: all 0.2s; }
-        .btn-community-soft:hover { background: var(--accent-yellow-soft); border-color: var(--accent-yellow-border); color: #fbbf24; }
+        .community-mode #alerts-feed { background: transparent; }
         @media (max-width: 768px) {
             #app-shell { flex-direction: column; }
             #sidebar { position: fixed; top: 0; left: 0; bottom: 0; width: min(88vw, 300px); z-index: 50; transform: translateX(-105%); box-shadow: 8px 0 32px rgba(0,0,0,0.1); }
@@ -112,8 +96,6 @@
             <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
                 <button type="button" data-section="home" class="nav-btn nav-active w-full text-left px-4 py-3 rounded-2xl border border-transparent text-sm transition text-slate-300">🏠 Inicio</button>
                 <button type="button" data-section="chats" class="nav-btn w-full text-left px-4 py-3 rounded-2xl border border-transparent text-slate-400 hover:bg-slate-800/80 hover:text-slate-200 text-sm transition">💬 Chats activos</button>
-                <button type="button" disabled class="w-full text-left px-4 py-3 rounded-2xl text-slate-600 text-sm cursor-not-allowed">🏥 Veterinarias <span class="text-[9px]">(pronto)</span></button>
-                <button type="button" disabled class="w-full text-left px-4 py-3 rounded-2xl text-slate-600 text-sm cursor-not-allowed">🛒 Pet Shops <span class="text-[9px]">(pronto)</span></button>
             </nav>
             <p class="px-4 text-[10px] text-slate-500 font-semibold uppercase tracking-wide">Mis mascotas</p>
             <div id="sidebar-pets" class="px-3 pb-2 max-h-44 overflow-y-auto space-y-2"></div>
@@ -211,7 +193,7 @@
 
                 <section id="alerts-section" class="alerts-section flex flex-col w-full xl:max-h-[calc(100vh-10rem)]">
                     <div class="flex items-center justify-between mb-2">
-                        <h3 id="feed-title" class="text-sm font-bold text-[#f8fafc]">Novedades de la comunidad</h3>
+                        <h3 id="feed-title" class="text-sm font-bold text-[#f8fafc]">Alertas y avistajes</h3>
                         <span id="alert-count" class="text-xs bg-[#f59e0b]/20 text-[#fbbf24] px-2.5 py-1 rounded-full font-bold">0</span>
                     </div>
                     <div id="alerts-feed" class="flex-1 overflow-y-auto space-y-3 card-honey p-3 min-h-[200px]">
@@ -789,98 +771,34 @@
             return reports.map((r) => `${r.id}:${r.createdAt}`).join("|");
         }
 
-        function renderCommunityWallOnce() {
+        function renderIdleFeedOnce() {
             if (communityWallPainted) return;
             const feed = $("alerts-feed");
             const section = $("alerts-section");
             section.classList.add("community-mode");
             section.classList.remove("avistaje-mode");
-            feed.innerHTML = renderCommunityWall();
-            $("alert-count").textContent = "Activo";
-            $("alert-count").className = "text-xs bg-emerald-500/15 text-emerald-400 px-2.5 py-1 rounded-full font-bold";
+            feed.innerHTML = renderIdleFeed();
+            $("alert-count").textContent = "—";
+            $("alert-count").className = "text-xs bg-slate-700/40 text-slate-400 px-2.5 py-1 rounded-full font-bold";
             communityWallPainted = true;
         }
 
-        function invalidateCommunityWall() {
+        function invalidateIdleFeed() {
             communityWallPainted = false;
+        }
+
+        function renderIdleFeed() {
+            return `<div class="text-center py-12 px-4">
+                <p class="text-3xl mb-3" aria-hidden="true">🐾</p>
+                <p class="text-sm font-semibold text-slate-300">Sin alertas activas</p>
+                <p class="text-xs text-slate-500 mt-2 leading-relaxed max-w-xs mx-auto">
+                    Cuando actives <strong class="text-[#f59e0b]">Mi mascota se perdió</strong>, acá verás ubicaciones y avistajes en tiempo real.
+                </p>
+            </div>`;
         }
 
         function formatTime(iso) {
             return new Date(iso).toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        }
-
-        const COMMUNITY_DOG_IMG = "https://images.unsplash.com/photo-1587300003388-59208fd962fb?w=480&h=280&fit=crop&q=80";
-
-        function renderNeighborhoodStats() {
-            return `<div class="community-stats community-animate rounded-2xl p-4 mb-3 shadow-lg">
-                <div class="flex items-start gap-3">
-                    <div class="w-11 h-11 rounded-xl bg-[#0f172a] border border-slate-600 flex items-center justify-center text-xl shrink-0" aria-hidden="true">📊</div>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-extrabold text-[#f8fafc] leading-tight">Actividad en Punta Mogotes este mes</p>
-                        <p class="text-[10px] text-slate-400 mt-0.5">Comunidad vecinal · Honey App</p>
-                    </div>
-                    <span class="community-tag text-[9px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0">En vivo</span>
-                </div>
-                <div class="grid grid-cols-2 gap-2 mt-3">
-                    <div class="stat-pill rounded-xl px-3 py-2">
-                        <p class="text-[10px] text-slate-500 uppercase font-bold">Perdidas</p>
-                        <p class="text-lg font-extrabold text-[#f8fafc]">2</p>
-                    </div>
-                    <div class="stat-pill rounded-xl px-3 py-2 border-emerald-500/30">
-                        <p class="text-[10px] text-emerald-400/80 uppercase font-bold">Recuperadas</p>
-                        <p class="text-lg font-extrabold text-emerald-400">2 ✨</p>
-                    </div>
-                </div>
-                <p class="text-xs text-slate-400 mt-3 leading-relaxed">
-                    <span class="text-[#fbbf24] font-semibold">Tiempo promedio de reunión:</span> 3 hs gracias a vecinos y puntos seguros del barrio.
-                </p>
-                <div class="flex gap-1 mt-3 h-1.5 rounded-full overflow-hidden bg-slate-800">
-                    <div class="h-full rounded-full bg-emerald-500/70" style="width:50%"></div>
-                    <div class="h-full rounded-full bg-[#f59e0b]/60" style="width:30%"></div>
-                    <div class="h-full rounded-full bg-slate-600" style="width:20%"></div>
-                </div>
-            </div>`;
-        }
-
-        function renderCommunityWall() {
-            return `${renderNeighborhoodStats()}
-                <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-0.5 mb-2 community-animate">Muro · Encontrados sin QR</p>
-                <article class="community-card community-animate rounded-2xl overflow-hidden shadow-md">
-                    <img src="${COMMUNITY_DOG_IMG}" alt="Perro encontrado en Plaza Mitre" class="community-card-img w-full h-36" loading="lazy">
-                    <div class="p-4">
-                        <div class="flex items-center justify-between gap-2 mb-2">
-                            <span class="community-tag--warm community-tag text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">🐶 Perro encontrado</span>
-                            <time class="text-[10px] text-slate-500 shrink-0">Hace 2 h</time>
-                        </div>
-                        <h4 class="font-bold text-[#f8fafc] text-sm">Plaza Mitre · Punta Mogotes</h4>
-                        <p class="text-sm text-slate-300 mt-2 leading-relaxed">Tiene collar verde pero no tiene chapita QR. Está refugiado en la veterinaria de la esquina.</p>
-                        <p class="text-[10px] text-slate-500 mt-2">Publicado por vecino · Verificado por 3 personas</p>
-                        <button type="button" class="btn-community-know btn-community-soft w-full mt-3 py-2.5 rounded-xl text-sm font-semibold">💬 ¿Lo conocés?</button>
-                    </div>
-                </article>
-                <article class="community-card community-animate rounded-2xl p-4 shadow-md mt-3">
-                    <div class="flex items-start gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-2xl shrink-0">📌</div>
-                        <div class="min-w-0 flex-1">
-                            <span class="community-tag--info community-tag text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">Utilidad local</span>
-                            <h4 class="font-bold text-[#f8fafc] text-sm mt-2">Campaña de Castración · Zoonosis MDP</h4>
-                            <ul class="text-sm text-slate-300 mt-2 space-y-1.5 leading-relaxed">
-                                <li><span class="text-sky-400 font-semibold">Mar 3 y 10</span> · 9:00 a 13:00 hs</li>
-                                <li><span class="text-sky-400 font-semibold">Jue 5 y 12</span> · 14:00 a 18:00 hs</li>
-                                <li class="text-xs text-slate-500">Av. Luro 3030 · Turnos sin costo con DNI</li>
-                            </ul>
-                        </div>
-                    </div>
-                </article>
-                <article class="community-card community-animate rounded-2xl p-4 shadow-md mt-3">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="community-tag text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">✓ Historia feliz</span>
-                        <time class="text-[10px] text-slate-500 ml-auto">Ayer</time>
-                    </div>
-                    <h4 class="font-bold text-[#f8fafc] text-sm">Michi recuperada en 2 h</h4>
-                    <p class="text-sm text-slate-300 mt-1.5 leading-relaxed">Una gata atigrada volvió con su familia gracias a un avistaje en el grupo del barrio y la chapita Honey de su hermano canino vecino.</p>
-                    <p class="text-[10px] text-emerald-400/90 mt-2 font-semibold">+1 reunión exitosa esta semana</p>
-                </article>`;
         }
 
         function renderAlertCard(report, isNew) {
@@ -916,11 +834,11 @@
             const section = $("alerts-section");
 
             if (!inEmergency) {
-                renderCommunityWallOnce();
+                renderIdleFeedOnce();
                 return;
             }
 
-            invalidateCommunityWall();
+            invalidateIdleFeed();
             section.classList.remove("community-mode");
             section.classList.add("avistaje-mode");
             $("alert-count").className = "text-xs bg-[#f59e0b]/20 text-[#fbbf24] px-2.5 py-1 rounded-full font-bold";
@@ -1118,7 +1036,7 @@
             btn.textContent = lost ? "✓ Desactivar modo búsqueda" : "⚠️ Mi mascota se perdió";
             btn.classList.toggle("emergency-active", lost);
 
-            $("feed-title").textContent = lost ? "Reportes de avistaje en tiempo real" : "Novedades de la comunidad";
+            $("feed-title").textContent = lost ? "Reportes de avistaje en tiempo real" : "Alertas y avistajes";
             $("pet-safety-panel").classList.toggle("hidden", !lost);
 
             if (lost && pet) {
@@ -1130,10 +1048,10 @@
             updateHealthPanel();
 
             if (lost) {
-                invalidateCommunityWall();
+                invalidateIdleFeed();
                 renderAlerts();
             } else {
-                renderCommunityWallOnce();
+                renderIdleFeedOnce();
             }
         }
 
@@ -1146,7 +1064,7 @@
             try {
                 await api(`/api/owner/pets/${pet.id}/toggle-alert`, { method: "POST" });
                 if (wasLost) resetOwnerModeVisuals();
-                else invalidateCommunityWall();
+                else invalidateIdleFeed();
                 await poll();
                 configurePolling();
             } catch (err) {
@@ -1288,7 +1206,7 @@
                 });
                 closeSecureChat();
                 resetOwnerModeVisuals();
-                invalidateCommunityWall();
+                invalidateIdleFeed();
                 await poll();
                 configurePolling();
             } catch (err) {
@@ -1478,11 +1396,6 @@
             const chatBtn = e.target.closest(".btn-secure-chat");
             if (chatBtn?.dataset.sessionId) {
                 openChat(chatBtn.dataset.sessionId, chatBtn.dataset.petName);
-                return;
-            }
-            const knowBtn = e.target.closest(".btn-community-know");
-            if (knowBtn) {
-                alert("¡Gracias por ayudar! En la versión completa podrás contactar al vecino que publicó este aviso de forma anónima.");
             }
         });
 

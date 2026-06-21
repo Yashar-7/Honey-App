@@ -1,3 +1,5 @@
+import { prisma } from "./prisma";
+
 export type SafePoint = {
   id: string;
   type: "veterinary" | "petshop";
@@ -7,53 +9,35 @@ export type SafePoint = {
   emoji: string;
 };
 
-/** Puntos seguros demo — Mar del Plata (modo dueño) */
-export const SAFE_POINTS_MAR_DEL_PLATA: SafePoint[] = [
-  {
-    id: "vet-atlantica",
-    type: "veterinary",
-    name: "Veterinaria Atlántica",
-    latitude: -38.0022,
-    longitude: -57.5485,
-    emoji: "🏥",
-  },
-  {
-    id: "vet-sur",
-    type: "veterinary",
-    name: "Clínica Vet del Sur",
-    latitude: -38.0185,
-    longitude: -57.532,
-    emoji: "🏥",
-  },
-  {
-    id: "pet-max",
-    type: "petshop",
-    name: "Pet Shop Max",
-    latitude: -38.008,
-    longitude: -57.561,
-    emoji: "🛒",
-  },
-  {
-    id: "pet-huellas",
-    type: "petshop",
-    name: "Huellas & Co.",
-    latitude: -37.995,
-    longitude: -57.539,
-    emoji: "🛒",
-  },
-  {
-    id: "vet-centro",
-    type: "veterinary",
-    name: "Veterinaria Centro MDP",
-    latitude: -37.9995,
-    longitude: -57.5565,
-    emoji: "🏥",
-  },
-];
+/** Puntos seguros aliados desde la base de datos (veterinarias y pet shops). */
+export async function loadSafePointsFromDb(): Promise<SafePoint[]> {
+  const shops = await prisma.petShop.findMany({
+    where: {
+      isActive: true,
+      latitude: { not: null },
+      longitude: { not: null },
+    },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      latitude: true,
+      longitude: true,
+    },
+    orderBy: [{ type: "asc" }, { name: "asc" }],
+  });
 
-export function getSafePointsNear(
-  _lat: number,
-  _lng: number,
-): SafePoint[] {
-  return SAFE_POINTS_MAR_DEL_PLATA.map((point) => ({ ...point }));
+  return shops
+    .filter(
+      (shop): shop is typeof shop & { latitude: number; longitude: number } =>
+        shop.latitude != null && shop.longitude != null,
+    )
+    .map((shop) => ({
+      id: shop.id,
+      type: shop.type === "veterinary" ? "veterinary" : "petshop",
+      name: shop.name,
+      latitude: shop.latitude,
+      longitude: shop.longitude,
+      emoji: shop.type === "veterinary" ? "🏥" : "🛒",
+    }));
 }

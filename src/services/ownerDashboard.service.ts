@@ -5,7 +5,7 @@ import {
 } from "../lib/geocoding";
 import { prisma } from "../lib/prisma";
 import {
-  getSafePointsNear,
+  loadSafePointsFromDb,
   type SafePoint,
 } from "../lib/safePoints";
 
@@ -132,11 +132,7 @@ export async function getOwnerWarRoom(userId: string, since?: Date) {
   const petIds = pets.map((pet) => pet.id);
   const lostPetIds = pets.filter((p) => p.isLost).map((p) => p.id);
 
-  const anchorPet = pets.find((p) => p.lastLat != null && p.lastLng != null) ?? pets[0];
-  const safePoints = getSafePointsNear(
-    anchorPet?.lastLat ?? -38.0055,
-    anchorPet?.lastLng ?? -57.5426,
-  );
+  const safePoints = await loadSafePointsFromDb();
 
   if (petIds.length === 0) {
     return {

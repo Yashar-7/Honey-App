@@ -39,9 +39,7 @@ export async function requestNeighborhoodHelp(input: {
     input.longitude,
   );
 
-  console.log(
-    `[neighborhood-help] Ayuda vecinal · ${pet.name} · ${addressLabel} (radio ${radiusKm} km)`,
-  );
+  console.log(`[neighborhood-help] Ayuda vecinal · petId=${pet.id} (radio ${radiusKm} km)`);
 
   const nearbyPets = await prisma.pet.findMany({
     where: {

@@ -106,7 +106,7 @@ export function PetRegisterV2({
   const step2Ready = Boolean(species) && Boolean(colorId);
   const needsAccount = !authToken;
   const accountEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountEmail.trim());
-  const accountPasswordValid = accountPassword.length >= 6;
+  const accountPasswordValid = accountPassword.length >= 8;
   const accountReady = !needsAccount || (accountEmailValid && accountPasswordValid);
 
   const resolvedColor = useMemo(() => {
@@ -824,7 +824,7 @@ export function PetRegisterV2({
                       autoComplete="new-password"
                       value={accountPassword}
                       onChange={(e) => setAccountPassword(e.target.value)}
-                      placeholder="Contraseña (mín. 6 caracteres)"
+                      placeholder="Contraseña (mín. 8 caracteres)"
                       className="h-12 w-full rounded-xl border border-mustard/25 bg-night px-4 text-sm text-white placeholder:text-white/35 focus:border-mustard focus:outline-none focus:ring-2 focus:ring-mustard/15"
                     />
                   </div>
@@ -835,7 +835,7 @@ export function PetRegisterV2({
                     <p className="text-xs text-red-300">Ingresá un email válido</p>
                   )}
                   {accountPassword.length > 0 && !accountPasswordValid && (
-                    <p className="text-xs text-red-300">La contraseña debe tener al menos 6 caracteres</p>
+                    <p className="text-xs text-red-300">La contraseña debe tener al menos 8 caracteres</p>
                   )}
                 </div>
               )}

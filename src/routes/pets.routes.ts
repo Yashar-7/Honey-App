@@ -45,13 +45,8 @@ petsRouter.post(
   "/",
   requireAuth,
   (req, res, next) => {
-    // Diagnóstico
-    console.log("--- PETS API: Recibiendo petición ---");
-    console.log("Content-Type:", req.headers['content-type']);
-    
     uploadPetPhoto(req, res, (err) => {
       if (err) {
-        console.error("Error en Multer:", err);
         next(err instanceof Error ? new AppError(400, err.message) : err);
         return;
       }
@@ -61,14 +56,10 @@ petsRouter.post(
   async (req, res, next) => {
     try {
       const { userId } = req as AuthenticatedRequest;
-      console.log("Procesando creación de mascota para usuario:", userId);
-      
-      // Validación Zod
       const body = createPetSchema.parse(req.body);
 
       let photoUrl: string | undefined;
       if (req.file) {
-        console.log("Archivo detectado, subiendo a Supabase...");
         const fileName = buildUniqueImageFileName(req.file.originalname);
         photoUrl = await uploadToSupabase(
           req.file.buffer,
@@ -76,18 +67,15 @@ petsRouter.post(
           DEFAULT_PET_PHOTOS_BUCKET,
           req.file.mimetype,
         );
-        console.log("Foto subida exitosamente:", photoUrl);
       }
 
       const result = await createPet(userId, body, {
         photoUrl,
         req,
       });
-      
-      console.log("Mascota creada con éxito en DB.");
+
       res.status(201).json(result);
     } catch (err) {
-      console.error("Error final en pets.routes:", err);
       next(err);
     }
   },

@@ -1,8 +1,6 @@
 const UNAVAILABLE_LABEL = "Ubicación exacta no disponible";
 
-const GEOCODING_DEBUG =
-  process.env.GEOCODING_DEBUG === "true" ||
-  process.env.NODE_ENV !== "production";
+const GEOCODING_DEBUG = process.env.GEOCODING_DEBUG === "true";
 
 type GeocodeAddressComponent = {
   long_name: string;
@@ -77,7 +75,7 @@ export function resolveMapsApiKey(): string | undefined {
 }
 
 function logApiKeyDiagnosticOnce(resolved: ReturnType<typeof resolveMapsApiKeySource>) {
-  if (apiKeyDiagnosticLogged) return;
+  if (apiKeyDiagnosticLogged || !GEOCODING_DEBUG) return;
   apiKeyDiagnosticLogged = true;
 
   if (!resolved) {
@@ -107,8 +105,17 @@ function logGoogleGeocodeFailure(
   debug: GeocodeDebugInfo,
   googleResponse?: GeocodeApiResponse | null,
 ) {
-  console.log("[geocoding] ── respuesta Google Geocoding API ──");
-  console.log("[geocoding] coordenadas:", latitude, longitude);
+  const summary =
+    debug.googleErrorMessage ||
+    debug.googleStatus ||
+    debug.networkError ||
+    "unknown";
+
+  console.warn(`[geocoding] Falló (${latitude}, ${longitude}): ${summary}`);
+
+  if (!GEOCODING_DEBUG) return;
+
+  console.log("[geocoding] ── detalle (GEOCODING_DEBUG) ──");
   if (debug.keySource) {
     console.log("[geocoding] key env:", debug.keySource, "→", debug.keyPreview);
   }
