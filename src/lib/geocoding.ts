@@ -105,6 +105,7 @@ function logGoogleGeocodeFailure(
   latitude: number,
   longitude: number,
   debug: GeocodeDebugInfo,
+  googleResponse?: GeocodeApiResponse | null,
 ) {
   console.log("[geocoding] ── respuesta Google Geocoding API ──");
   console.log("[geocoding] coordenadas:", latitude, longitude);
@@ -126,6 +127,20 @@ function logGoogleGeocodeFailure(
   }
   if (debug.resultsCount != null) {
     console.log("[geocoding] results.length:", debug.resultsCount);
+  }
+  if (googleResponse) {
+    console.log(
+      "[geocoding] Google response (completo):",
+      JSON.stringify(
+        {
+          status: googleResponse.status,
+          error_message: googleResponse.error_message ?? null,
+          results: googleResponse.results ?? [],
+        },
+        null,
+        2,
+      ),
+    );
   }
   if (debug.networkError) {
     console.log("[geocoding] error de red/fetch:", debug.networkError);
@@ -326,7 +341,7 @@ export async function reverseGeocodeAddress(
         data.error_message ||
         debug.googleErrorMessage ||
         `HTTP ${response.status} ${response.statusText}`;
-      logGoogleGeocodeFailure(latitude, longitude, debug);
+      logGoogleGeocodeFailure(latitude, longitude, debug, data);
       return attachDebug(
         {
           addressLabel: formatUnavailableLocation(latitude, longitude),
@@ -337,7 +352,7 @@ export async function reverseGeocodeAddress(
     }
 
     if (data.status !== "OK") {
-      logGoogleGeocodeFailure(latitude, longitude, debug);
+      logGoogleGeocodeFailure(latitude, longitude, debug, data);
       return attachDebug(
         {
           addressLabel: formatUnavailableLocation(latitude, longitude),
@@ -349,7 +364,7 @@ export async function reverseGeocodeAddress(
 
     if (!data.results?.length) {
       debug.googleStatus = data.status || "ZERO_RESULTS";
-      logGoogleGeocodeFailure(latitude, longitude, debug);
+      logGoogleGeocodeFailure(latitude, longitude, debug, data);
       return attachDebug(
         {
           addressLabel: formatUnavailableLocation(latitude, longitude),
@@ -373,7 +388,7 @@ export async function reverseGeocodeAddress(
     }
 
     debug.googleStatus = "OK_NO_STREET";
-    logGoogleGeocodeFailure(latitude, longitude, debug);
+    logGoogleGeocodeFailure(latitude, longitude, debug, data);
     return attachDebug(
       {
         addressLabel: formatUnavailableLocation(latitude, longitude),
