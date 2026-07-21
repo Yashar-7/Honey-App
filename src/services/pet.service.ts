@@ -7,8 +7,10 @@ import { AppError } from "../middleware/errorHandler";
 import type { CreatePetInput } from "../schemas/pet.schema";
 import {
   assertStockSerialAvailable,
+  isQrStockSoftFallbackEnabled,
   markStockSerialUsed,
   normalizeStockSerial,
+  QrStockUnavailableError,
 } from "./qrStock.service";
 
 const VACCINATION_REMINDER_MONTHS = 12;
@@ -242,7 +244,17 @@ export async function createPet(
       : null;
 
   if (stockSerial) {
-    await assertStockSerialAvailable(stockSerial);
+    try {
+      await assertStockSerialAvailable(stockSerial);
+    } catch (err) {
+      if (err instanceof QrStockUnavailableError && isQrStockSoftFallbackEnabled()) {
+        console.warn(
+          `[createPet] Soft-fallback: stock no disponible, se permite activar ${stockSerial}`,
+        );
+      } else {
+        throw err;
+      }
+    }
   }
 
   const qrToken = generateQrToken();
@@ -261,8 +273,14 @@ export async function createPet(
     try {
       await markStockSerialUsed(stockSerial);
     } catch (err) {
-      await prisma.pet.delete({ where: { id: pet.id } }).catch(() => undefined);
-      throw err;
+      if (err instanceof QrStockUnavailableError && isQrStockSoftFallbackEnabled()) {
+        console.warn(
+          `[createPet] Soft-fallback: Pet creada pero QrStock no marcado como usado (${stockSerial})`,
+        );
+      } else {
+        await prisma.pet.delete({ where: { id: pet.id } }).catch(() => undefined);
+        throw err;
+      }
     }
   }
 

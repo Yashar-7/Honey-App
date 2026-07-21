@@ -9,7 +9,10 @@
  *
  * Base URL por defecto: https://honey-app-gamma.vercel.app (no usa BASE_URL del .env).
  * Requiere: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
- * Salida: output/honey-qr-stock.pdf + output/svgs/
+ * Salida:
+ *   output/svgs/          — un SVG vectorial por serial (Corel / Illustrator)
+ *   output/sheets/        — laminas A4 vectoriales 5x4 (recomendado para imprenta)
+ *   output/honey-qr-stock.pdf — vista previa raster (no usar en Corel)
  */
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
@@ -18,12 +21,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import QRCode from "qrcode";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import sharp from "sharp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, "..");
 const outputDir = path.join(root, "output");
 const svgDir = path.join(outputDir, "svgs");
+const sheetsDir = path.join(outputDir, "sheets");
 
 const DEFAULT_BASE_URL = "https://honey-app-gamma.vercel.app";
 const QR_STOCK_TABLE = "QrStock";
@@ -37,7 +40,7 @@ function readArg(name, fallback) {
 
 const COUNT = Number(readArg("--count", "100"));
 const START = Number(readArg("--start", "1"));
-/** Siempre producción por defecto; solo override explícito con --base-url */
+/** Siempre produccion por defecto; solo override explicito con --base-url */
 const BASE_URL = readArg("--base-url", DEFAULT_BASE_URL).replace(/\/$/, "");
 
 if (!Number.isFinite(COUNT) || COUNT < 1 || COUNT > 10000) {
@@ -68,19 +71,41 @@ function readSupabaseEnv() {
 const SVG_OPTIONS = {
   type: "svg",
   errorCorrectionLevel: "H",
-  margin: 2,
+  margin: 1,
   width: 512,
   color: { dark: "#0f172a", light: "#ffffff" },
 };
 
+const PNG_OPTIONS = {
+  type: "png",
+  errorCorrectionLevel: "H",
+  margin: 1,
+  width: 512,
+  color: { dark: "#0f172a", light: "#ffffff" },
+};
+
+/** A4 en puntos (pdf-lib) */
 const PAGE = { width: 595.28, height: 841.89 };
-const MARGIN = 36;
+const MARGIN = 28;
 const COLS = 5;
 const ROWS = 4;
-const CELL_W = (PAGE.width - MARGIN * 2) / COLS;
-const CELL_H = (PAGE.height - MARGIN * 2) / ROWS;
-const QR_SIZE = Math.min(CELL_W * 0.72, CELL_H * 0.62);
+const QRS_PER_PAGE = COLS * ROWS;
+
+/** 2 cm minimo escaneable: 72 pt/pulgada, 2.54 cm/pulgada */
+const PT_PER_CM = 72 / 2.54;
+const MIN_QR_PT = 2 * PT_PER_CM;
 const LABEL_SIZE = 11;
+const LABEL_GAP = 6;
+
+const GRID_W = PAGE.width - MARGIN * 2;
+const GRID_H = PAGE.height - MARGIN * 2;
+const CELL_W = GRID_W / COLS;
+const CELL_H = GRID_H / ROWS;
+const LABEL_BLOCK = LABEL_SIZE + LABEL_GAP + 4;
+const QR_SIZE = Math.max(
+  MIN_QR_PT,
+  Math.min(CELL_W * 0.88, CELL_H - LABEL_BLOCK - 8),
+);
 
 async function seedQrStock(supabase, serials) {
   const rows = serials.map((serial) => ({
@@ -105,35 +130,119 @@ async function generateSvg(activationUrl) {
   return QRCode.toString(activationUrl, SVG_OPTIONS);
 }
 
-async function svgToPng(svg) {
-  return sharp(Buffer.from(svg)).png().toBuffer();
+async function generatePng(activationUrl) {
+  return QRCode.toBuffer(activationUrl, PNG_OPTIONS);
+}
+
+function assertActivationUrl(serial, url) {
+  const expected = buildActivationUrl(serial);
+  if (url !== expected) {
+    throw new Error(`URL invalida para ${serial}: ${url} (esperado: ${expected})`);
+  }
+}
+
+/** Extrae paths internos del SVG generado por qrcode (100% vectorial). */
+function extractSvgInner(svgString) {
+  const viewBoxMatch = svgString.match(/viewBox="([^"]+)"/);
+  const parts = (viewBoxMatch?.[1] ?? "0 0 45 45").trim().split(/\s+/).map(Number);
+  const vbW = parts[2] ?? 45;
+  const vbH = parts[3] ?? 45;
+  const inner = svgString
+    .replace(/^[\s\S]*?<svg[^>]*>/i, "")
+    .replace(/<\/svg>\s*$/i, "")
+    .trim();
+  return { vbW, vbH, inner };
+}
+
+function escapeXml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Laminas A4 vectoriales (5x4) listas para Corel Draw / Illustrator. */
+function buildVectorSheets(entries) {
+  mkdirSync(sheetsDir, { recursive: true });
+
+  const totalPages = Math.ceil(entries.length / QRS_PER_PAGE);
+  const sheetPaths = [];
+
+  for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+    const slice = entries.slice(
+      pageIndex * QRS_PER_PAGE,
+      pageIndex * QRS_PER_PAGE + QRS_PER_PAGE,
+    );
+
+    const parts = [
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      `<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 ${PAGE.width} ${PAGE.height}">`,
+      `<rect width="100%" height="100%" fill="#ffffff"/>`,
+    ];
+
+    for (let i = 0; i < slice.length; i++) {
+      const col = i % COLS;
+      const row = Math.floor(i / COLS);
+      const cellLeft = MARGIN + col * CELL_W;
+      const cellTop = MARGIN + row * CELL_H;
+
+      const qrX = cellLeft + (CELL_W - QR_SIZE) / 2;
+      const qrY = cellTop + (CELL_H - QR_SIZE - LABEL_BLOCK) / 2;
+
+      const { vbW, vbH, inner } = extractSvgInner(slice[i].svg);
+      const scale = QR_SIZE / Math.max(vbW, vbH);
+
+      parts.push(
+        `<g transform="translate(${qrX.toFixed(2)} ${qrY.toFixed(2)}) scale(${scale.toFixed(6)})">`,
+        inner,
+        "</g>",
+      );
+
+      const label = escapeXml(slice[i].serial);
+      const textY = qrY + QR_SIZE + LABEL_GAP + LABEL_SIZE;
+      parts.push(
+        `<text x="${(cellLeft + CELL_W / 2).toFixed(2)}" y="${textY.toFixed(2)}" ` +
+          `text-anchor="middle" font-family="Arial, Helvetica, sans-serif" ` +
+          `font-size="${LABEL_SIZE}" font-weight="700" fill="#0f172a">${label}</text>`,
+      );
+    }
+
+    parts.push("</svg>");
+
+    const fileName = `honey-qr-sheet-${String(pageIndex + 1).padStart(2, "0")}.svg`;
+    const filePath = path.join(sheetsDir, fileName);
+    writeFileSync(filePath, parts.join("\n"), "utf8");
+    sheetPaths.push(filePath);
+  }
+
+  return sheetPaths;
 }
 
 async function buildPdf(entries) {
   const pdf = await PDFDocument.create();
   const font = await pdf.embedFont(StandardFonts.HelveticaBold);
-  const fontRegular = await pdf.embedFont(StandardFonts.Helvetica);
 
-  const perPage = COLS * ROWS;
-  let page = pdf.addPage([PAGE.width, PAGE.height]);
+  const totalPages = Math.ceil(entries.length / QRS_PER_PAGE);
+  const pages = Array.from({ length: totalPages }, () =>
+    pdf.addPage([PAGE.width, PAGE.height]),
+  );
 
   for (let i = 0; i < entries.length; i++) {
-    if (i > 0 && i % perPage === 0) {
-      page = pdf.addPage([PAGE.width, PAGE.height]);
-    }
-
-    const indexOnPage = i % perPage;
+    const pageIndex = Math.floor(i / QRS_PER_PAGE);
+    const indexOnPage = i % QRS_PER_PAGE;
     const col = indexOnPage % COLS;
     const row = Math.floor(indexOnPage / COLS);
+    const page = pages[pageIndex];
 
-    const cellX = MARGIN + col * CELL_W;
-    const cellY = PAGE.height - MARGIN - (row + 1) * CELL_H;
+    const cellLeft = MARGIN + col * CELL_W;
+    const cellTop = PAGE.height - MARGIN - row * CELL_H;
 
-    const png = await svgToPng(entries[i].svg);
+    const png = await generatePng(entries[i].url);
     const image = await pdf.embedPng(png);
 
-    const qrX = cellX + (CELL_W - QR_SIZE) / 2;
-    const qrY = cellY + CELL_H * 0.28;
+    const qrX = cellLeft + (CELL_W - QR_SIZE) / 2;
+    const qrY = cellTop - CELL_H + (CELL_H - QR_SIZE - LABEL_BLOCK) / 2 + LABEL_BLOCK;
 
     page.drawImage(image, {
       x: qrX,
@@ -145,89 +254,67 @@ async function buildPdf(entries) {
     const label = entries[i].serial;
     const labelWidth = font.widthOfTextAtSize(label, LABEL_SIZE);
     page.drawText(label, {
-      x: cellX + (CELL_W - labelWidth) / 2,
-      y: qrY - 16,
+      x: cellLeft + (CELL_W - labelWidth) / 2,
+      y: qrY - LABEL_GAP - LABEL_SIZE,
       size: LABEL_SIZE,
       font,
       color: rgb(0.06, 0.09, 0.16),
     });
-
-    const sub = "Honey App";
-    const subWidth = fontRegular.widthOfTextAtSize(sub, 8);
-    page.drawText(sub, {
-      x: cellX + (CELL_W - subWidth) / 2,
-      y: qrY - 28,
-      size: 8,
-      font: fontRegular,
-      color: rgb(0.35, 0.4, 0.48),
-    });
   }
-
-  const cover = pdf.insertPage(0, [PAGE.width, PAGE.height]);
-  cover.drawText("Honey App - Lote de chapas QR", {
-    x: MARGIN,
-    y: PAGE.height - MARGIN - 24,
-    size: 20,
-    font,
-    color: rgb(0.06, 0.09, 0.16),
-  });
-  cover.drawText(`Seriales: ${entries[0].serial} a ${entries[entries.length - 1].serial}`, {
-    x: MARGIN,
-    y: PAGE.height - MARGIN - 52,
-    size: 12,
-    font: fontRegular,
-    color: rgb(0.2, 0.25, 0.33),
-  });
-  cover.drawText(`Destino: ${BASE_URL}/activar?serial=HNY-XXX`, {
-    x: MARGIN,
-    y: PAGE.height - MARGIN - 72,
-    size: 11,
-    font: fontRegular,
-    color: rgb(0.2, 0.25, 0.33),
-  });
-  cover.drawText(`Generado: ${new Date().toISOString()}`, {
-    x: MARGIN,
-    y: PAGE.height - MARGIN - 92,
-    size: 10,
-    font: fontRegular,
-    color: rgb(0.45, 0.5, 0.58),
-  });
 
   return pdf.save();
 }
 
 async function main() {
-  console.log("\n🍯 Honey App — Generación masiva de QRs");
+  console.log("\nHoney App - Generacion masiva de QRs");
   console.log(`   Base URL: ${BASE_URL}`);
-  console.log(`   Rango: ${formatSerial(START)} … ${formatSerial(START + COUNT - 1)}\n`);
+  console.log(`   Rango: ${formatSerial(START)} a ${formatSerial(START + COUNT - 1)}`);
+  console.log(
+    `   PDF: grilla ${COLS}x${ROWS} (${QRS_PER_PAGE}/pag), QR ${(QR_SIZE / PT_PER_CM).toFixed(1)} cm\n`,
+  );
 
   const serials = Array.from({ length: COUNT }, (_, i) => formatSerial(START + i));
   const supabase = readSupabaseEnv();
 
   mkdirSync(svgDir, { recursive: true });
+  mkdirSync(outputDir, { recursive: true });
 
-  console.log("📦 Insertando registros en Supabase QrStock…");
+  console.log("Insertando registros en Supabase QrStock…");
   const inserted = await seedQrStock(supabase, serials);
-  console.log(`   ✓ ${inserted} filas en QrStock`);
+  console.log(`   OK ${inserted} filas nuevas/confirmadas en QrStock`);
 
-  console.log("🎨 Generando SVGs…");
+  console.log("Generando SVGs y validando URLs…");
   const entries = [];
   for (const serial of serials) {
     const url = buildActivationUrl(serial);
+    assertActivationUrl(serial, url);
     const svg = await generateSvg(url);
     const svgPath = path.join(svgDir, `${serial}.svg`);
     writeFileSync(svgPath, svg, "utf8");
     entries.push({ serial, url, svg });
   }
-  console.log(`   ✓ ${entries.length} SVGs en ${svgDir}`);
 
-  console.log("📄 Compilando PDF para imprenta…");
+  console.log(`   OK ${entries.length} SVGs en ${svgDir}`);
+  console.log(`   Ejemplo URL: ${entries[0].url}`);
+  console.log(`   Ejemplo URL: ${entries[entries.length - 1].url}`);
+
+  console.log("Generando laminas vectoriales SVG (Corel / imprenta)…");
+  const sheetPaths = buildVectorSheets(entries);
+  console.log(`   OK ${sheetPaths.length} laminas en ${sheetsDir}`);
+  console.log("   Envia a la fabrica: output/sheets/*.svg (100% vectorial)");
+
+  console.log("Compilando PDF raster (solo vista previa, no para Corel)…");
   const pdfBytes = await buildPdf(entries);
   const pdfPath = path.join(outputDir, "honey-qr-stock.pdf");
   writeFileSync(pdfPath, pdfBytes);
-  console.log(`   ✓ PDF: ${pdfPath}`);
 
-  console.log("\n✅ Listo. Enviá el PDF a la imprenta.\n");
+  const pageCount = Math.ceil(entries.length / QRS_PER_PAGE);
+  console.log(`   OK PDF: ${pdfPath}`);
+  console.log(`   Paginas PDF: ${pageCount} (${entries.length} QRs)`);
+  console.log("\nListo para imprenta:");
+  console.log(`   Vector (Corel 17): ${sheetsDir}`);
+  console.log(`   Individual:        ${svgDir}`);
+  console.log(`   Preview PDF:       ${pdfPath}\n`);
 }
 
 main().catch((err) => {

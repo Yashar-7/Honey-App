@@ -100,6 +100,33 @@
         return;
       }
 
+      if (error === "unavailable") {
+        showError(
+          "Estamos mejorando el servicio",
+          serial
+            ? 'No pudimos validar la chapita <span class="serial">' +
+                serial +
+                "</span> en este momento. Podés reintentar o continuar el registro si tu chapita es nueva."
+            : "El servicio de chapitas no responde. Intentá de nuevo en unos minutos.",
+          [
+            {
+              className: "btn-primary",
+              href: "/activar?serial=" + encodeURIComponent(serial),
+              label: "Reintentar",
+            },
+            {
+              className: "btn-secondary",
+              href:
+                "/registro?serial=" +
+                encodeURIComponent(serial) +
+                "&modo=registro&offline=1",
+              label: "Continuar al registro",
+            },
+          ],
+        );
+        return;
+      }
+
       if (!serial) {
         showError(
           "Falta el código",
@@ -110,8 +137,39 @@
       }
 
       fetch("/api/qr-stock/" + encodeURIComponent(serial))
-        .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (res) {
+          return res.json().then(function (data) {
+            return { ok: res.ok, status: res.status, data: data };
+          });
+        })
         .then(function (result) {
+          if (result.status === 503 || result.data.code === "STOCK_UNAVAILABLE") {
+            if (result.data.softFallback && result.data.registroUrl) {
+              window.location.replace(result.data.registroUrl);
+              return;
+            }
+            showError(
+              "Estamos mejorando el servicio",
+              "No pudimos validar tu chapita ahora. Reintentá en unos minutos.",
+              [
+                {
+                  className: "btn-primary",
+                  href: "/activar?serial=" + encodeURIComponent(serial),
+                  label: "Reintentar",
+                },
+                {
+                  className: "btn-secondary",
+                  href:
+                    "/registro?serial=" +
+                    encodeURIComponent(serial) +
+                    "&modo=registro&offline=1",
+                  label: "Continuar al registro",
+                },
+              ],
+            );
+            return;
+          }
+
           if (!result.ok) {
             showError(
               "Código no válido",
@@ -141,13 +199,21 @@
         })
         .catch(function () {
           showError(
-            "Error de conexión",
+            "Estamos mejorando el servicio",
             "No pudimos validar la chapita. Revisá tu internet e intentá de nuevo.",
             [
               {
                 className: "btn-primary",
                 href: "/activar?serial=" + encodeURIComponent(serial),
                 label: "Reintentar",
+              },
+              {
+                className: "btn-secondary",
+                href:
+                  "/registro?serial=" +
+                  encodeURIComponent(serial) +
+                  "&modo=registro&offline=1",
+                label: "Continuar al registro",
               },
             ],
           );

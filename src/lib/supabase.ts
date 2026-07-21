@@ -16,15 +16,66 @@ export const SUPABASE_BROWSER_CLIENT_OPTIONS = {
 
 let adminClient: SupabaseClient | null = null;
 
-function readSupabaseEnv(): { url: string; serviceRoleKey: string } {
+const FETCH_TIMEOUT_MS = 8_000;
+
+/** fetch con timeout — evita colgar la función serverless en Vercel. */
+function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  const parentSignal = init?.signal;
+  if (parentSignal) {
+    if (parentSignal.aborted) {
+      controller.abort();
+    } else {
+      parentSignal.addEventListener("abort", () => controller.abort(), { once: true });
+    }
+  }
+
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => {
+    clearTimeout(timeoutId);
+  });
+}
+
+function normalizeSupabaseUrl(raw: string): string {
+  let url = raw.trim().replace(/\/$/, "");
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  return url;
+}
+
+export function isSupabaseAdminConfigured(): boolean {
   const url = process.env.SUPABASE_URL?.trim();
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  return Boolean(url && key);
+}
+
+function readSupabaseEnv(): { url: string; serviceRoleKey: string } {
+  const rawUrl = process.env.SUPABASE_URL?.trim();
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
-  if (!url || !serviceRoleKey) {
+  if (!rawUrl || !serviceRoleKey) {
     throw new AppError(
       503,
-      "Almacenamiento de imágenes no configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)",
+      "Supabase no configurado (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)",
     );
+  }
+
+  const url = normalizeSupabaseUrl(rawUrl);
+
+  try {
+    const parsed = new URL(url);
+    if (!parsed.hostname.includes("supabase")) {
+      console.warn(
+        `[supabase] SUPABASE_URL host inusual: ${parsed.hostname} (¿URL correcta del proyecto?)`,
+      );
+    }
+  } catch {
+    throw new AppError(503, "SUPABASE_URL inválida — debe ser https://xxxx.supabase.co");
   }
 
   return { url, serviceRoleKey };
@@ -36,6 +87,7 @@ export function getSupabaseAdmin(): SupabaseClient {
     const { url, serviceRoleKey } = readSupabaseEnv();
     adminClient = createClient(url, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
+      global: { fetch: fetchWithTimeout },
     });
   }
   return adminClient;

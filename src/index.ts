@@ -13,7 +13,12 @@ import { petShopsRouter } from "./routes/petShops.routes";
 import { qrRouter } from "./routes/qr.routes";
 import { qrStockRouter } from "./routes/qrStock.routes";
 import { prisma } from "./lib/prisma";
-import { lookupQrStock, normalizeStockSerial } from "./services/qrStock.service";
+import {
+  isQrStockSoftFallbackEnabled,
+  lookupQrStock,
+  normalizeStockSerial,
+  QrStockUnavailableError,
+} from "./services/qrStock.service";
 
 const app = express();
 
@@ -95,19 +100,34 @@ app.get(["/registro-v2", "/registro-v2/"], (req, res) => {
  * Activación de chapita física preimpresa (?serial=HNY-001).
  * - Disponible → registro de mascota
  * - Ya activada → escaneo vecino (redirige al token de la mascota)
+ * - Stock caído → pantalla amigable (o soft-fallback a registro)
  */
-app.get("/activar", async (req, res, next) => {
-  try {
-    const rawSerial = req.query.serial;
-    const serial = normalizeStockSerial(
-      Array.isArray(rawSerial) ? rawSerial[0] : rawSerial,
-    );
+app.get("/activar", async (req, res) => {
+  const rawSerial = req.query.serial;
+  const serial = normalizeStockSerial(
+    Array.isArray(rawSerial) ? rawSerial[0] : rawSerial,
+  );
 
-    if (!serial) {
-      sendPublicPage(res, "activar.html");
+  if (!serial) {
+    sendPublicPage(res, "activar.html");
+    return;
+  }
+
+  // Camino rápido vía Neon: chapita ya vinculada (no depende de Supabase).
+  try {
+    const existingPet = await prisma.pet.findFirst({
+      where: { stockSerial: serial, isActive: true },
+      select: { qrToken: true },
+    });
+    if (existingPet) {
+      res.redirect(`/?token=${encodeURIComponent(existingPet.qrToken)}`);
       return;
     }
+  } catch (err) {
+    console.error("[activar] Neon lookup falló:", err);
+  }
 
+  try {
     const stock = await lookupQrStock(serial);
     if (!stock) {
       res.redirect(`/activar?error=invalid&serial=${encodeURIComponent(serial)}`);
@@ -121,19 +141,26 @@ app.get("/activar", async (req, res, next) => {
       return;
     }
 
-    const pet = await prisma.pet.findFirst({
-      where: { stockSerial: serial, isActive: true },
-      select: { qrToken: true },
-    });
-
-    if (!pet) {
-      res.redirect(`/activar?error=orphan&serial=${encodeURIComponent(serial)}`);
+    res.redirect(`/activar?error=orphan&serial=${encodeURIComponent(serial)}`);
+  } catch (err) {
+    if (err instanceof QrStockUnavailableError) {
+      console.error("[activar] QrStock unavailable:", err.message);
+      if (isQrStockSoftFallbackEnabled()) {
+        res.redirect(
+          `/registro?serial=${encodeURIComponent(serial)}&modo=registro&offline=1`,
+        );
+        return;
+      }
+      res.redirect(
+        `/activar?error=unavailable&serial=${encodeURIComponent(serial)}`,
+      );
       return;
     }
 
-    res.redirect(`/?token=${encodeURIComponent(pet.qrToken)}`);
-  } catch (err) {
-    next(err);
+    console.error("[activar] error inesperado:", err);
+    res.redirect(
+      `/activar?error=unavailable&serial=${encodeURIComponent(serial)}`,
+    );
   }
 });
 
