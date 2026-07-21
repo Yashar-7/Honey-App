@@ -55,12 +55,10 @@ export const createPetSchema = z.object({
     .min(1, "El mensaje para el vecino es obligatorio")
     .max(500),
   stockSerial: z
-    .string()
+    .string({ required_error: "Se requiere una chapita física (stockSerial)" })
     .trim()
     .toUpperCase()
-    .regex(/^HNY-\d{3}$/, "Serial de chapita inválido")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+    .regex(/^HNY-\d{3}$/, "Serial de chapita inválido"),
 });
 
 export const updateHealthObservationsSchema = z.object({

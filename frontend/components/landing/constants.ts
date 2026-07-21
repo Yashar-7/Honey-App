@@ -13,3 +13,4 @@ export const PRIMARY_CTA_CLASS =
 
 export const REGISTRO_HREF = "/registro";
 export const LOGIN_HREF = "/login";
+/** CTA de landing: lleva a /registro, que muestra el gate de chapita física. */

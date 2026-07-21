@@ -8,7 +8,7 @@ type PrimaryCtaProps = {
 };
 
 export function PrimaryCta({
-  label = "Registrar mi mascota",
+  label = "Activá tu chapita",
   className,
   href = REGISTRO_HREF,
 }: PrimaryCtaProps) {

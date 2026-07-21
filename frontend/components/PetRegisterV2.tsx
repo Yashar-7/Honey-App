@@ -209,6 +209,12 @@ export function PetRegisterV2({
 
   const submitPet = async () => {
     if (!species || !photoFile || !nameValid || !accountReady) return;
+    if (!stockSerial) {
+      setError(
+        "Para proteger a tu mascota con Honey App, adquiere tu chapita física oficial en nuestras veterinarias aliadas.",
+      );
+      return;
+    }
     setSubmitting(true);
     setError(null);
 

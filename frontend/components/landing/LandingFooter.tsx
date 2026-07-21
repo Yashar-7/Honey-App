@@ -13,7 +13,7 @@ export function LandingFooter() {
             Portal del dueño
           </a>
           <a href="/registro" className="text-honey/80 transition hover:text-honey">
-            Registrar mascota
+            Activá tu chapita
           </a>
         </div>
       </div>

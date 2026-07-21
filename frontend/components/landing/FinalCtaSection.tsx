@@ -11,7 +11,7 @@ export function FinalCtaSection() {
         </p>
 
         <div className="mt-8 flex justify-center">
-          <PrimaryCta label="Registrar mi mascota — es gratis" />
+          <PrimaryCta label="Activá tu chapita oficial" />
         </div>
 
         <div className="mt-10 border-t border-border pt-8">

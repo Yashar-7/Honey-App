@@ -27,7 +27,7 @@ export function LandingNavbar() {
             Encontré una mascota
           </a>
           <PrimaryCta
-            label="Registrar"
+            label="Activá chapita"
             className="!min-w-0 !px-4 !py-2.5 !text-sm sm:!px-5"
           />
         </nav>

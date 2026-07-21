@@ -7,10 +7,8 @@ import { AppError } from "../middleware/errorHandler";
 import type { CreatePetInput } from "../schemas/pet.schema";
 import {
   assertStockSerialAvailable,
-  isQrStockSoftFallbackEnabled,
   markStockSerialUsed,
   normalizeStockSerial,
-  QrStockUnavailableError,
 } from "./qrStock.service";
 
 const VACCINATION_REMINDER_MONTHS = 12;
@@ -243,19 +241,15 @@ export async function createPet(
       ? normalizeStockSerial(input.stockSerial)
       : null;
 
-  if (stockSerial) {
-    try {
-      await assertStockSerialAvailable(stockSerial);
-    } catch (err) {
-      if (err instanceof QrStockUnavailableError && isQrStockSoftFallbackEnabled()) {
-        console.warn(
-          `[createPet] Soft-fallback: stock no disponible, se permite activar ${stockSerial}`,
-        );
-      } else {
-        throw err;
-      }
-    }
+  if (!stockSerial) {
+    throw new AppError(
+      403,
+      "Para registrar una mascota necesitás una chapita física oficial (serial HNY-XXX)",
+    );
   }
+
+  // Validación estricta contra Supabase QrStock (existe + isUsed=false)
+  await assertStockSerialAvailable(stockSerial);
 
   const qrToken = generateQrToken();
   const nextReminderDate = computeNextReminderDate(
@@ -263,37 +257,24 @@ export async function createPet(
     input.lastDewormingDate,
   );
 
-  let pet: CreatedPetWithHealth;
-  pet = await prisma.pet.create({
-    data: buildPetCreateData(userId, input, qrToken, options?.photoUrl, stockSerial ?? undefined),
+  const pet: CreatedPetWithHealth = await prisma.pet.create({
+    data: buildPetCreateData(userId, input, qrToken, options?.photoUrl, stockSerial),
     select: PET_CREATE_SELECT,
   });
 
-  if (stockSerial) {
-    try {
-      await markStockSerialUsed(stockSerial);
-    } catch (err) {
-      if (err instanceof QrStockUnavailableError && isQrStockSoftFallbackEnabled()) {
-        console.warn(
-          `[createPet] Soft-fallback: Pet creada pero QrStock no marcado como usado (${stockSerial})`,
-        );
-      } else {
-        await prisma.pet.delete({ where: { id: pet.id } }).catch(() => undefined);
-        throw err;
-      }
-    }
+  try {
+    await markStockSerialUsed(stockSerial);
+  } catch (err) {
+    await prisma.pet.delete({ where: { id: pet.id } }).catch(() => undefined);
+    throw err;
   }
 
-  const scanUrl = stockSerial
-    ? `${resolvePublicBaseUrl(options?.req)}/activar?serial=${encodeURIComponent(stockSerial)}`
-    : buildPetScanUrl(pet.qrToken, options?.req);
+  const scanUrl = `${resolvePublicBaseUrl(options?.req)}/activar?serial=${encodeURIComponent(stockSerial)}`;
 
   return {
-    message: stockSerial
-      ? "Chapita activada correctamente. Tu mascota ya está protegida."
-      : "Mascota registrada. El QR SVG está listo para enviar a la imprenta.",
+    message: "Chapita activada correctamente. Tu mascota ya está protegida.",
     qrToken: pet.qrToken,
-    stockSerial: stockSerial ?? null,
+    stockSerial,
     pet,
     scanUrl,
     qrSvgUrl: `/api/qr/generate/${pet.qrToken}`,

@@ -28,7 +28,7 @@ export function StickyMobileCta() {
           href={REGISTRO_HREF}
           className="flex h-14 w-full items-center justify-center rounded-[14px] bg-honey text-[16px] font-bold text-white shadow-honey transition hover:bg-honey-hover active:scale-[0.98]"
         >
-          Registrar mi mascota — gratis
+          Activá tu chapita oficial
         </a>
       </div>
     </div>

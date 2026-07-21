@@ -31,11 +31,10 @@ export class QrStockUnavailableError extends AppError {
   }
 }
 
-/** Si es true (default), ante caída de Supabase se permite ir a registro con serial válido. */
+/** Si es true, ante caída de Supabase se permite ir a registro (NO recomendado en prod comercial). Default: OFF. */
 export function isQrStockSoftFallbackEnabled(): boolean {
   const raw = process.env.QR_STOCK_SOFT_FALLBACK?.trim().toLowerCase();
-  if (raw === "0" || raw === "false" || raw === "off") return false;
-  return true;
+  return raw === "1" || raw === "true" || raw === "on";
 }
 
 export function normalizeStockSerial(value: unknown): string | null {
