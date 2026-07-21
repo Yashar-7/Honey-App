@@ -20,7 +20,7 @@ const FETCH_TIMEOUT_MS = 8_000;
 
 /** fetch con timeout — evita colgar la función serverless en Vercel. */
 function fetchWithTimeout(
-  input: RequestInfo | URL,
+  input: string | URL,
   init?: RequestInit,
 ): Promise<Response> {
   const controller = new AbortController();
@@ -87,7 +87,7 @@ export function getSupabaseAdmin(): SupabaseClient {
     const { url, serviceRoleKey } = readSupabaseEnv();
     adminClient = createClient(url, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
-      global: { fetch: fetchWithTimeout },
+      global: { fetch: fetchWithTimeout as typeof fetch },
     });
   }
   return adminClient;
