@@ -1,5 +1,4 @@
 import { PrimaryCta } from "./PrimaryCta";
-import { REGISTRO_HREF } from "./constants";
 
 export function FinalCtaSection() {
   return (
@@ -18,10 +17,10 @@ export function FinalCtaSection() {
           <p className="text-sm text-muted">
             ¿Sos pet shop o veterinaria?{" "}
             <a
-              href={REGISTRO_HREF}
+              href="#mapa-vivo"
               className="font-semibold text-honey underline-offset-4 hover:underline"
             >
-              Sumá Honey App a tus servicios →
+              Mirá la red de aliados →
             </a>
           </p>
         </div>

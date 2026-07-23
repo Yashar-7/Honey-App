@@ -28,7 +28,7 @@ export function HeroSection() {
 
           <div className="mt-6 flex flex-col items-center gap-3 lg:items-start">
             <PrimaryCta />
-            <p className="text-xs text-muted/90">Gratis empezar · 2 minutos · Chapita QR incluida</p>
+            <p className="text-xs text-muted/90">Chapita física oficial · Activación por QR</p>
             <LoginLink />
           </div>
         </div>
