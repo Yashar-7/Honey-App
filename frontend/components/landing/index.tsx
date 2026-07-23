@@ -1,9 +1,11 @@
 import { BenefitsSection } from "./BenefitsSection";
+import { CommunityAlertsFeed } from "./CommunityAlertsFeed";
 import { FinalCtaSection } from "./FinalCtaSection";
 import { HeroSection } from "./HeroSection";
 import { HowItWorksSection } from "./HowItWorksSection";
 import { LandingFooter } from "./LandingFooter";
 import { LandingNavbar } from "./LandingNavbar";
+import { ProtectionNetworkMap } from "./ProtectionNetworkMap";
 import { SocialProofSection } from "./SocialProofSection";
 import { StickyMobileCta } from "./StickyMobileCta";
 import { TrustSection } from "./TrustSection";
@@ -18,6 +20,8 @@ export function LandingPage() {
         <HowItWorksSection />
         <BenefitsSection />
         <TrustSection />
+        <ProtectionNetworkMap />
+        <CommunityAlertsFeed />
         <FinalCtaSection />
       </main>
       <LandingFooter />
@@ -27,6 +31,7 @@ export function LandingPage() {
 }
 
 export { BenefitsSection } from "./BenefitsSection";
+export { CommunityAlertsFeed } from "./CommunityAlertsFeed";
 export { FinalCtaSection } from "./FinalCtaSection";
 export { HeroSection } from "./HeroSection";
 export { HowItWorksSection } from "./HowItWorksSection";
@@ -34,6 +39,7 @@ export { LandingFooter } from "./LandingFooter";
 export { LandingNavbar } from "./LandingNavbar";
 export { LoginLink } from "./LoginLink";
 export { PrimaryCta } from "./PrimaryCta";
+export { ProtectionNetworkMap } from "./ProtectionNetworkMap";
 export { SocialProofSection } from "./SocialProofSection";
 export { StickyMobileCta } from "./StickyMobileCta";
 export { TrustSection } from "./TrustSection";
