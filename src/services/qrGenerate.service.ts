@@ -4,16 +4,41 @@ import { prisma } from "../lib/prisma";
 import { resolveQrToken } from "../lib/qrToken";
 import { AppError } from "../middleware/errorHandler";
 
-const SVG_OPTIONS: QRCode.QRCodeToStringOptions = {
-  type: "svg",
-  errorCorrectionLevel: "H",
-  margin: 2,
-  width: 300,
-  color: {
-    dark: "#0f172a",
-    light: "#ffffff",
-  },
-};
+/** ECC M: menos denso que H; módulos rellenos aptos para láser. */
+const ECC: QRCode.QRCodeErrorCorrectionLevel = "M";
+const QR_MARGIN_MODULES = 1;
+const ENGRAVE_FILL = "#000000";
+
+/** SVG con path relleno (sin strokes finos que el láser funde). */
+function toFilledQrSvg(data: string): string {
+  const qr = QRCode.create(data, { errorCorrectionLevel: ECC });
+  const size = qr.modules.size;
+  const margin = QR_MARGIN_MODULES;
+  const dim = size + margin * 2;
+  const parts: string[] = [];
+
+  for (let y = 0; y < size; y++) {
+    let x = 0;
+    while (x < size) {
+      if (!qr.modules.get(x, y)) {
+        x += 1;
+        continue;
+      }
+      let w = 1;
+      while (x + w < size && qr.modules.get(x + w, y)) w += 1;
+      parts.push(`M${x + margin} ${y + margin}h${w}v1h${-w}z`);
+      x += w;
+    }
+  }
+
+  return [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}" shape-rendering="crispEdges">`,
+    `<rect width="${dim}" height="${dim}" fill="#ffffff"/>`,
+    `<path fill="${ENGRAVE_FILL}" d="${parts.join("")}"/>`,
+    `</svg>`,
+  ].join("");
+}
 
 export async function assertQrTokenExists(token: string) {
   const resolved = await resolveQrToken(token);
@@ -44,7 +69,7 @@ export async function generateQrSvgForToken(
 ) {
   const pet = await assertQrTokenExists(token);
   const scanUrl = buildPetScanUrl(pet.qrToken, req);
-  const svg = await QRCode.toString(scanUrl, SVG_OPTIONS);
+  const svg = toFilledQrSvg(scanUrl);
 
   return {
     petId: pet.id,

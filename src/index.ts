@@ -18,6 +18,7 @@ import {
   lookupQrStock,
   normalizeStockSerial,
   QrStockUnavailableError,
+  shortCodeToSerial,
 } from "./services/qrStock.service";
 
 const app = express();
@@ -94,6 +95,21 @@ app.get(["/registro-v2", "/registro-v2/"], (req, res) => {
   const queryStart = req.url.indexOf("?");
   const query = queryStart >= 0 ? req.url.slice(queryStart) : "";
   res.redirect(301, query ? `/registro${query}` : "/registro");
+});
+
+/**
+ * Redirección corta de chapitas físicas impresas.
+ * GET /s/000001  →  302 /activar?serial=HNY-001
+ * GET /s/001     →  302 /activar?serial=HNY-001
+ * GET /s/00001e  →  302 /activar?serial=HNY-050  (base36 del generador)
+ */
+app.get("/s/:serial", (req, res) => {
+  const stockSerial = shortCodeToSerial(req.params.serial);
+  if (!stockSerial) {
+    res.redirect(302, "/activar?error=invalid");
+    return;
+  }
+  res.redirect(302, `/activar?serial=${encodeURIComponent(stockSerial)}`);
 });
 
 /**

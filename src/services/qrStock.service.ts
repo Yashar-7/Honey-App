@@ -43,6 +43,44 @@ export function normalizeStockSerial(value: unknown): string | null {
   return SERIAL_PATTERN.test(serial) ? serial : null;
 }
 
+/**
+ * Código corto alfanumérico (≤8 chars) para QR de baja densidad en chapita láser.
+ * HNY-001 → "000001" (base36, pad 6). Debe coincidir con scripts/generate-qrs.mjs.
+ */
+export function serialToShortCode(serial: string): string {
+  const n = Number(String(serial).replace(/\D/g, ""));
+  if (!Number.isFinite(n) || n < 1 || n > 999) {
+    throw new Error(`Serial fuera de rango para código corto: ${serial}`);
+  }
+  return n.toString(36).padStart(6, "0");
+}
+
+/**
+ * Código corto de chapita láser → serial oficial HNY-XXX.
+ * Acepta "000001", "001", "1" y códigos base36 del generador (p. ej. "00001e" = 50).
+ */
+export function shortCodeToSerial(code: unknown): string | null {
+  if (typeof code !== "string") return null;
+  const raw = code.trim();
+  if (!raw) return null;
+
+  // Ya viene como serial oficial
+  const asSerial = normalizeStockSerial(raw);
+  if (asSerial) return asSerial;
+
+  const compact = raw.toLowerCase();
+  if (!/^[0-9a-z]{1,8}$/.test(compact)) return null;
+
+  // Preferir decimal cuando es solo dígitos (000001 / 001 → 1).
+  // Si trae a-z, es base36 del script generate-qrs (00001e → 50).
+  const n = /^[0-9]+$/.test(compact)
+    ? Number.parseInt(compact, 10)
+    : Number.parseInt(compact, 36);
+
+  if (!Number.isFinite(n) || n < 1 || n > 999) return null;
+  return `HNY-${String(n).padStart(3, "0")}`;
+}
+
 function mapRow(row: QrStockRow): QrStockRecord {
   return {
     serial: row.serial,
