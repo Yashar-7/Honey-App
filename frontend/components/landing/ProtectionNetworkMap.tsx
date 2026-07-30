@@ -146,11 +146,11 @@ export function ProtectionNetworkMap() {
         </motion.div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-60px" }}
-          transition={{ duration: 0.5, delay: 0.05 }}
-          className="relative overflow-hidden rounded-[24px] border border-border bg-card"
+          initial={{ opacity: 0, y: 28, filter: "blur(6px)" }}
+          whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          viewport={{ once: true, amount: 0.25, margin: "-40px" }}
+          transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+          className="relative overflow-hidden rounded-[24px] border border-honey/20 bg-card shadow-[0_0_40px_rgba(245,158,11,0.08)]"
         >
           <div
             className="relative aspect-[4/5] w-full sm:aspect-[16/10]"
@@ -197,9 +197,16 @@ export function ProtectionNetworkMap() {
                 <motion.button
                   key={shop.id}
                   type="button"
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.08 * index, type: "spring", stiffness: 320 }}
+                  initial={{ y: -56, opacity: 0, scale: 0.55 }}
+                  whileInView={{ y: 0, opacity: 1, scale: 1 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 420,
+                    damping: 16,
+                    mass: 0.7,
+                    delay: 0.14 + index * 0.11,
+                  }}
                   onClick={() =>
                     setSelectedId((id) => (id === shop.id ? null : shop.id))
                   }
@@ -207,6 +214,17 @@ export function ProtectionNetworkMap() {
                   style={{ left: pos.left, top: pos.top }}
                   aria-label={`${shop.name} — ${typeLabel(shop.type)}`}
                 >
+                  {/* Anillos de luz pulsantes a los costados */}
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -left-3 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full border border-honey/50 motion-reduce:animate-none animate-pin-pulse"
+                    style={{ animationDelay: `${index * 0.18}s` }}
+                  />
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -right-3 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full border border-honey/40 motion-reduce:animate-none animate-pin-pulse"
+                    style={{ animationDelay: `${0.35 + index * 0.18}s` }}
+                  />
                   <span
                     className={`relative flex h-10 w-10 items-center justify-center rounded-full border-2 shadow-lg transition ${
                       active
@@ -221,7 +239,10 @@ export function ProtectionNetworkMap() {
                     ) : (
                       <Store className="h-4 w-4" aria-hidden />
                     )}
-                    <span className="absolute inset-0 animate-ping rounded-full bg-honey/30 opacity-40" />
+                    <span
+                      aria-hidden
+                      className="absolute -inset-1 rounded-full border border-honey/35 motion-reduce:hidden animate-pin-pulse"
+                    />
                   </span>
                 </motion.button>
               );

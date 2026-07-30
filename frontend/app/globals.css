@@ -20,3 +20,13 @@
     @apply touch-manipulation;
   }
 }
+
+@layer utilities {
+  @media (prefers-reduced-motion: reduce) {
+    .animate-radar-ring,
+    .animate-pin-pulse,
+    .animate-scan {
+      animation: none !important;
+    }
+  }
+}

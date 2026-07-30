@@ -209,11 +209,26 @@ export function CommunityAlertsFeed() {
                       className="h-full w-full object-cover opacity-90"
                       loading="lazy"
                     />
-                    <div className="absolute left-2 top-2">
+                    {/* Escáner láser IA — solo transform/opacity (liviano en móvil) */}
+                    <div
+                      aria-hidden
+                      className="animate-scan pointer-events-none absolute inset-x-0 top-0 z-[1] h-[18%] motion-reduce:hidden"
+                      style={{
+                        background:
+                          "linear-gradient(180deg, transparent 0%, rgba(245,158,11,0.15) 35%, rgba(252,211,77,0.85) 50%, rgba(245,158,11,0.2) 65%, transparent 100%)",
+                        boxShadow: "0 0 18px rgba(245,158,11,0.45)",
+                        animationDelay: `${i * 0.35}s`,
+                      }}
+                    />
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(15,23,42,0.25)_0%,transparent_40%,transparent_60%,rgba(15,23,42,0.25)_100%)]"
+                    />
+                    <div className="absolute left-2 top-2 z-[2]">
                       <StatusPill status={alert.status} />
                     </div>
                     {alert.preview && (
-                      <span className="absolute bottom-2 right-2 rounded-md bg-night/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
+                      <span className="absolute bottom-2 right-2 z-[2] rounded-md bg-night/80 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/70">
                         Vista previa
                       </span>
                     )}
