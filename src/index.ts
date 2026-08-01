@@ -5,6 +5,7 @@ import { existsSync } from "fs";
 import path from "path";
 import { errorHandler } from "./middleware/errorHandler";
 import { alertsRouter } from "./routes/alerts.routes";
+import { announcementsRouter } from "./routes/announcements.routes";
 import { chatRouter } from "./routes/chat.routes";
 import { authRouter } from "./routes/auth.routes";
 import { ownerRouter } from "./routes/owner.routes";
@@ -79,7 +80,7 @@ app.get(["/registro", "/registro/"], (_req, res) => {
   sendPublicPage(res, "registro.html");
 });
 
-/** Consola admin (export Next) — bypass ChapitaGate → dashboard. */
+/** Consola admin (export Next) — bypass ChapitaGate → panel de control. */
 app.get(["/admin-login", "/admin-login/"], (_req, res) => {
   const adminIndex = path.join(publicDir, "admin-login", "index.html");
   if (existsSync(adminIndex)) {
@@ -87,6 +88,15 @@ app.get(["/admin-login", "/admin-login/"], (_req, res) => {
     return;
   }
   res.status(404).type("text").send("Admin login no desplegado. Ejecutá el build del frontend.");
+});
+
+app.get(["/admin", "/admin/"], (_req, res) => {
+  const adminPanel = path.join(publicDir, "admin", "index.html");
+  if (existsSync(adminPanel)) {
+    res.sendFile(adminPanel);
+    return;
+  }
+  res.status(404).type("text").send("Panel admin no desplegado. Ejecutá el build del frontend.");
 });
 
 app.get("/login.html", (_req, res) => {
@@ -204,7 +214,8 @@ app.use((req, _res, next) => {
     reqPath.startsWith("/auth") ||
     reqPath.startsWith("/pets") ||
     reqPath.startsWith("/pet-shops") ||
-    reqPath.startsWith("/owner");
+    reqPath.startsWith("/owner") ||
+    reqPath.startsWith("/announcements");
 
   if (needsApiPrefix && !reqPath.startsWith("/api/")) {
     req.url = `/api${req.url.startsWith("/") ? req.url : `/${req.url}`}`;
@@ -219,6 +230,7 @@ app.use("/api/qr", qrRouter);
 app.use("/api/qr-stock", qrStockRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/alerts", alertsRouter);
+app.use("/api/announcements", announcementsRouter);
 app.use("/api/owner", ownerRouter);
 
 app.use(errorHandler);

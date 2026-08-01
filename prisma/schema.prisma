@@ -172,3 +172,19 @@ model PushSubscription {
   @@index([userId])
   @@map("push_subscriptions")
 }
+
+/** Avisos públicos editables por admin (zoonosis, tips, noticias locales). */
+model Announcement {
+  id          String    @id @default(uuid())
+  title       String
+  body        String
+  tag         String    @default("Comunidad")
+  isPublished Boolean   @default(true) @map("is_published")
+  publishedAt DateTime  @default(now()) @map("published_at")
+  createdById String?   @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@index([isPublished, publishedAt(sort: Desc)])
+  @@map("announcements")
+}

@@ -1,8 +1,11 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
+import { getAdminEmailAllowlist, isAdminEmail } from "../lib/adminAccess";
 import { AppError } from "../middleware/errorHandler";
 import { signToken } from "../middleware/auth.middleware";
+
+export { getAdminEmailAllowlist, isAdminEmail };
 
 export const loginSchema = z.object({
   email: z.string().email(),
@@ -73,27 +76,9 @@ export async function loginUser(email: string, password: string) {
   };
 }
 
-/** Emails autorizados para /admin-login (comma-separated). Fail-closed si vacío. */
-export function getAdminEmailAllowlist(): Set<string> {
-  const raw = process.env.ADMIN_EMAILS?.trim() || "";
-  if (!raw) return new Set();
-  return new Set(
-    raw
-      .split(",")
-      .map((e) => e.trim().toLowerCase())
-      .filter(Boolean),
-  );
-}
-
-export function isAdminEmail(email: string): boolean {
-  const allow = getAdminEmailAllowlist();
-  if (allow.size === 0) return false;
-  return allow.has(email.trim().toLowerCase());
-}
-
 /**
  * Login de administrador: valida User en Neon + allowlist ADMIN_EMAILS.
- * Omite el flujo chapita/stockSerial; el cliente debe ir a /dashboard.
+ * Omite el flujo chapita/stockSerial; el cliente debe ir a /admin.
  */
 export async function loginAdminUser(email: string, password: string) {
   const normalized = email.trim().toLowerCase();
@@ -132,6 +117,6 @@ export async function loginAdminUser(email: string, password: string) {
     },
     isAdmin: true as const,
     bypassStockSerial: true as const,
-    redirectTo: "/dashboard" as const,
+    redirectTo: "/admin" as const,
   };
 }

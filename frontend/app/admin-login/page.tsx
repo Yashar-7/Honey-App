@@ -81,8 +81,8 @@ export default function AdminLoginPage() {
       const sessionName = data.user?.name || "Administrador";
       safePersistAdminSession(data.token, sessionEmail, sessionName);
 
-      // Bypass estricto: nunca /registro (evita ChapitaGate sin serial)
-      safeNavigate(data.redirectTo || "/dashboard");
+      // Bypass estricto: consola admin (nunca /registro)
+      safeNavigate(data.redirectTo || "/admin");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Error de autenticación";
@@ -186,7 +186,7 @@ export default function AdminLoginPage() {
               disabled={submitting}
               className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-honey px-6 text-sm font-bold text-white shadow-honey transition hover:bg-honey-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? "Verificando…" : "Entrar al dashboard"}
+              {submitting ? "Verificando…" : "Entrar a la consola admin"}
             </button>
           </form>
 

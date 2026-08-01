@@ -52,7 +52,7 @@ const PREVIEW_ALERTS: AlertCard[] = [
   },
 ];
 
-const NEWS: NewsCard[] = [
+const FALLBACK_NEWS: NewsCard[] = [
   {
     id: "n1",
     title: "Microchip + chapita QR: la dupla que salva vidas",
@@ -99,14 +99,19 @@ function StatusPill({ status }: { status: AlertCard["status"] }) {
 export function CommunityAlertsFeed() {
   const [alerts, setAlerts] = useState<AlertCard[]>(PREVIEW_ALERTS);
   const [liveCount, setLiveCount] = useState(0);
+  const [news, setNews] = useState<NewsCard[]>(FALLBACK_NEWS);
 
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       try {
-        const res = await fetch("/api/alerts/active");
-        const data = (await res.json().catch(() => ({}))) as {
+        const [alertsRes, newsRes] = await Promise.all([
+          fetch("/api/alerts/active"),
+          fetch("/api/announcements"),
+        ]);
+
+        const data = (await alertsRes.json().catch(() => ({}))) as {
           count?: number;
           alerts?: Array<{
             id: string;
@@ -114,6 +119,15 @@ export function CommunityAlertsFeed() {
             photoUrl?: string | null;
             species?: string | null;
             isLost?: boolean;
+          }>;
+        };
+
+        const newsData = (await newsRes.json().catch(() => ({}))) as {
+          announcements?: Array<{
+            id: string;
+            title: string;
+            body: string;
+            tag: string;
           }>;
         };
 
@@ -134,7 +148,22 @@ export function CommunityAlertsFeed() {
           }));
 
         if (live.length > 0) {
-          setAlerts([...live, ...PREVIEW_ALERTS.filter((p) => p.status === "Reencontrado")].slice(0, 4));
+          setAlerts(
+            [
+              ...live,
+              ...PREVIEW_ALERTS.filter((p) => p.status === "Reencontrado"),
+            ].slice(0, 4),
+          );
+        }
+
+        const liveNews = (newsData.announcements ?? []).map((a) => ({
+          id: a.id,
+          title: a.title,
+          blurb: a.body,
+          tag: a.tag || "Comunidad",
+        }));
+        if (liveNews.length > 0) {
+          setNews(liveNews);
         }
       } catch {
         /* preview local */
@@ -273,7 +302,7 @@ export function CommunityAlertsFeed() {
                 Noticias locales
               </h3>
               <ul className="space-y-3">
-                {NEWS.map((item, i) => (
+                {news.map((item, i) => (
                   <motion.li
                     key={item.id}
                     initial={{ opacity: 0, x: 8 }}
