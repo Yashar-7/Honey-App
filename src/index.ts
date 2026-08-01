@@ -6,6 +6,7 @@ import path from "path";
 import { errorHandler } from "./middleware/errorHandler";
 import { alertsRouter } from "./routes/alerts.routes";
 import { announcementsRouter } from "./routes/announcements.routes";
+import { communityAlertsRouter } from "./routes/communityAlerts.routes";
 import { chatRouter } from "./routes/chat.routes";
 import { authRouter } from "./routes/auth.routes";
 import { ownerRouter } from "./routes/owner.routes";
@@ -215,7 +216,8 @@ app.use((req, _res, next) => {
     reqPath.startsWith("/pets") ||
     reqPath.startsWith("/pet-shops") ||
     reqPath.startsWith("/owner") ||
-    reqPath.startsWith("/announcements");
+    reqPath.startsWith("/announcements") ||
+    reqPath.startsWith("/community-alerts");
 
   if (needsApiPrefix && !reqPath.startsWith("/api/")) {
     req.url = `/api${req.url.startsWith("/") ? req.url : `/${req.url}`}`;
@@ -231,6 +233,7 @@ app.use("/api/qr-stock", qrStockRouter);
 app.use("/api/chat", chatRouter);
 app.use("/api/alerts", alertsRouter);
 app.use("/api/announcements", announcementsRouter);
+app.use("/api/community-alerts", communityAlertsRouter);
 app.use("/api/owner", ownerRouter);
 
 app.use(errorHandler);

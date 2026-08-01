@@ -188,3 +188,20 @@ model Announcement {
   @@index([isPublished, publishedAt(sort: Desc)])
   @@map("announcements")
 }
+
+/** Alertas solidarias de callejeros (sin registro / sin chapita). */
+model CommunityAlert {
+  id        String   @id @default(uuid())
+  species   String
+  zone      String
+  whatsapp  String
+  photoUrl  String   @map("photo_url")
+  notes     String?
+  status    String   @default("open")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([status, createdAt(sort: Desc)])
+  @@map("community_alerts")
+}

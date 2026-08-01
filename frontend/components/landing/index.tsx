@@ -7,6 +7,7 @@ import { LandingFooter } from "./LandingFooter";
 import { LandingNavbar } from "./LandingNavbar";
 import { ProtectionNetworkMap } from "./ProtectionNetworkMap";
 import { SocialProofSection } from "./SocialProofSection";
+import { SolidaryCommunityAlerts } from "./SolidaryCommunityAlerts";
 import { StickyMobileCta } from "./StickyMobileCta";
 import { TrustSection } from "./TrustSection";
 
@@ -21,6 +22,7 @@ export function LandingPage() {
         <BenefitsSection />
         <TrustSection />
         <ProtectionNetworkMap />
+        <SolidaryCommunityAlerts />
         <CommunityAlertsFeed />
         <FinalCtaSection />
       </main>
@@ -41,5 +43,6 @@ export { LoginLink } from "./LoginLink";
 export { PrimaryCta } from "./PrimaryCta";
 export { ProtectionNetworkMap } from "./ProtectionNetworkMap";
 export { SocialProofSection } from "./SocialProofSection";
+export { SolidaryCommunityAlerts } from "./SolidaryCommunityAlerts";
 export { StickyMobileCta } from "./StickyMobileCta";
 export { TrustSection } from "./TrustSection";
