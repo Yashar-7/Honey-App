@@ -79,6 +79,16 @@ app.get(["/registro", "/registro/"], (_req, res) => {
   sendPublicPage(res, "registro.html");
 });
 
+/** Consola admin (export Next) — bypass ChapitaGate → dashboard. */
+app.get(["/admin-login", "/admin-login/"], (_req, res) => {
+  const adminIndex = path.join(publicDir, "admin-login", "index.html");
+  if (existsSync(adminIndex)) {
+    res.sendFile(adminIndex);
+    return;
+  }
+  res.status(404).type("text").send("Admin login no desplegado. Ejecutá el build del frontend.");
+});
+
 app.get("/login.html", (_req, res) => {
   res.redirect(301, "/login");
 });

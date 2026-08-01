@@ -72,3 +72,66 @@ export async function loginUser(email: string, password: string) {
     },
   };
 }
+
+/** Emails autorizados para /admin-login (comma-separated). Fail-closed si vacío. */
+export function getAdminEmailAllowlist(): Set<string> {
+  const raw = process.env.ADMIN_EMAILS?.trim() || "";
+  if (!raw) return new Set();
+  return new Set(
+    raw
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean),
+  );
+}
+
+export function isAdminEmail(email: string): boolean {
+  const allow = getAdminEmailAllowlist();
+  if (allow.size === 0) return false;
+  return allow.has(email.trim().toLowerCase());
+}
+
+/**
+ * Login de administrador: valida User en Neon + allowlist ADMIN_EMAILS.
+ * Omite el flujo chapita/stockSerial; el cliente debe ir a /dashboard.
+ */
+export async function loginAdminUser(email: string, password: string) {
+  const normalized = email.trim().toLowerCase();
+  const allow = getAdminEmailAllowlist();
+
+  if (allow.size === 0) {
+    throw new AppError(
+      503,
+      "Acceso admin no configurado (definí ADMIN_EMAILS en el entorno)",
+    );
+  }
+
+  if (!allow.has(normalized)) {
+    throw new AppError(403, "No autorizado para acceso administrativo");
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email.trim(), mode: "insensitive" } },
+  });
+
+  if (!user) {
+    throw new AppError(401, "Credenciales inválidas");
+  }
+
+  const valid = await bcrypt.compare(password, user.passwordHash);
+  if (!valid) {
+    throw new AppError(401, "Credenciales inválidas");
+  }
+
+  return {
+    token: signToken(user.id),
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+    },
+    isAdmin: true as const,
+    bypassStockSerial: true as const,
+    redirectTo: "/dashboard" as const,
+  };
+}

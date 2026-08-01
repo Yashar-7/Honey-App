@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  loginAdminUser,
   loginSchema,
   loginUser,
   registerSchema,
@@ -30,6 +31,21 @@ authRouter.post("/login", async (req, res, next) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
     const result = await loginUser(email, password);
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * POST /api/auth/admin-login
+ * Acceso secreto de administrador (allowlist ADMIN_EMAILS).
+ * Bypass de ChapitaGate / stockSerial → el cliente redirige a /dashboard.
+ */
+authRouter.post("/admin-login", async (req, res, next) => {
+  try {
+    const { email, password } = loginSchema.parse(req.body);
+    const result = await loginAdminUser(email, password);
     res.json(result);
   } catch (err) {
     next(err);
