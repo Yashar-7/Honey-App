@@ -78,7 +78,7 @@ export async function loginUser(email: string, password: string) {
 
 /**
  * Login de administrador: valida User en Neon + allowlist ADMIN_EMAILS.
- * Omite el flujo chapita/stockSerial; el cliente debe ir a /admin.
+ * Omite el flujo chapita/stockSerial; el cliente debe ir a /admin/dashboard.
  */
 export async function loginAdminUser(email: string, password: string) {
   const normalized = email.trim().toLowerCase();
@@ -117,6 +117,6 @@ export async function loginAdminUser(email: string, password: string) {
     },
     isAdmin: true as const,
     bypassStockSerial: true as const,
-    redirectTo: "/admin" as const,
+    redirectTo: "/admin/dashboard" as const,
   };
 }

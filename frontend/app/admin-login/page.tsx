@@ -81,8 +81,8 @@ export default function AdminLoginPage() {
       const sessionName = data.user?.name || "Administrador";
       safePersistAdminSession(data.token, sessionEmail, sessionName);
 
-      // Bypass estricto: consola admin (nunca /registro)
-      safeNavigate(data.redirectTo || "/admin");
+      // Hub unificado (nunca /registro ni panel fragmentado)
+      safeNavigate(data.redirectTo || "/admin/dashboard/");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Error de autenticación";

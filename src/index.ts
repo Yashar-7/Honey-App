@@ -92,12 +92,19 @@ app.get(["/admin-login", "/admin-login/"], (_req, res) => {
 });
 
 app.get(["/admin", "/admin/"], (_req, res) => {
-  const adminPanel = path.join(publicDir, "admin", "index.html");
-  if (existsSync(adminPanel)) {
-    res.sendFile(adminPanel);
+  res.redirect(302, "/admin/dashboard/");
+});
+
+app.get(["/admin/dashboard", "/admin/dashboard/"], (_req, res) => {
+  const hub = path.join(publicDir, "admin", "dashboard", "index.html");
+  if (existsSync(hub)) {
+    res.sendFile(hub);
     return;
   }
-  res.status(404).type("text").send("Panel admin no desplegado. Ejecutá el build del frontend.");
+  res
+    .status(404)
+    .type("text")
+    .send("Master Admin Hub no desplegado. Ejecutá el build del frontend.");
 });
 
 app.get("/login.html", (_req, res) => {
